@@ -21,28 +21,35 @@ window.onload = function () {
 	var circles = [],
 		circle,
 		mat,
-		number = 200;
+		number = 100;
 
 
 	while (number--) {
 		mat = new grease.Material({fillStyle: 'rgb(' + random(0, 255) + ', ' + random(0, 255) + ', ' + random(0, 255) + ')'});
-		circle = new grease.Circle({x: random(40, 650), y: random(40, 500)}, random(10,50), mat);
+		circle = new grease.Circle(random(40, 650), random(40, 500), random(10,50), mat);
 		circle.on('click', function (e) {
 			scene.remove(e.actualTarget);
 		});
 		circles.push(circle);
 	}
 
-	scene.add(circles).on('frame', function (info) {
-		var time = info.elapsed / 1000;
 
-		_.each(circles, function (circle) {
-			circle.position.x += randomSign() * 20 * time;
-			circle.position.y += randomSign() * 20 * time;
-		});
 
+	// Variable time loop for rendering - from requestAnimationFrame
+	scene.add(circles).on('update', function (info) {
 		updateInfo(info);
-
 	}).start();
+
+
+
+	// Fixed time loop to update
+	window.setInterval(function () {
+		_.each(circles, function (circle) {
+			circle.moveTo({
+				x: circle.position.x += randomSign() * 2,
+				y: circle.position.y += randomSign() * 2
+			});
+		});
+	}, 20);
 
 };

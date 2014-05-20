@@ -1,11 +1,11 @@
 /* global define, require, exports */
 
 /**
- * Framework for working with canvas
+ * 2D animation framework for HTML canvas
  * @file grease.js
  * @author charliehw
  * @version 0.0.0
- * @todo Images, Lines, Gradients, Clipping, Transformation
+ * @todo Images, Lines, Gradients, Clipping, Text, Transformation, Sprites
  */
 
 (function (root, factory) {
@@ -37,6 +37,10 @@
         math = root.Math,
         date = root.Date;
 
+    var constants = {
+        RADIAL_GRADIENT_TYPE: 'radial',
+        LINEAR_GRADIENT_TYPE: 'linear'
+    };
 
     grease.version = '0.0.0';
 
@@ -49,16 +53,15 @@
 
 
     /**
-     * Basic subclass drawable entity
+     * Basic subclass drawable shape
      * @constructor
-     * @param position Position of the entity
-     * @param position.x Horizontal position
-     * @param position.y Vertical position
+     * @param {number} x Horizontal position
+     * @param {number} y Vertical position
      * @param {grease.Material} [material]
      */
-    grease.Entity = function (position, material) {
-        this.renderFlag = true;
-        this.position = position || {x: 0, y: 0};
+    grease.Shape = function (x, y, material) {
+        this.renderable = true;
+        this.position = {x: x || 0, y: y || 0};
         this.material = material || grease.defaultMaterial;
         this.scale = 1;
 
@@ -67,28 +70,31 @@
         this.states = [];
     };
 
-    _.extend(grease.Entity.prototype, {
+    _.extend(grease.Shape.prototype, {
 
         /**
          * Reference to constructor
-         * @memberof grease.Entity
+         * @memberof grease.Shape
          */
-        constructor: grease.Entity,
+        constructor: grease.Shape,
 
         /**
-         * Apply the material to the canvas, called whilst the entity being rendered
-         * @memberof grease.Entity
+         * Apply the material to the canvas, called whilst the shape being rendered
+         * @memberof grease.Shape
          * @param context
-         * @returns {grease.Entity}
+         * @returns {grease.Shape}
          */
         applyMaterial: function (context, scale) {
             var mat = this.material;
-            if (mat.fillStyle) {
+            if (mat.fillStyle && !this.isOutline) {
                 context.fillStyle = mat.fillStyle;
                 context.fill();
             }
             if (mat.lineWidth) {
                 context.lineWidth = mat.lineWidth * scale;
+            }
+            if (mat.lineCap) {
+                context.lineCap = mat.lineCap;
             }
             if (mat.strokeStyle) {
                 context.strokeStyle = mat.strokeStyle;
@@ -99,10 +105,10 @@
 
         /**
          * Defines an event handler
-         * @memberof grease.Entity
+         * @memberof grease.Shape
          * @param {string} event
          * @param {function} handler
-         * @returns {grease.Entity}
+         * @returns {grease.Shape}
          */
         on: function (event, handler) {
             if (this.events[event]) {
@@ -115,10 +121,10 @@
 
         /**
          * Removes an event handler
-         * @memberof grease.Entity
+         * @memberof grease.Shape
          * @param {string} [event] - Removes handlers for a specific event
          * @param {function} [handler] - Removes a specific handler for a specific event
-         * @returns {grease.Entity}
+         * @returns {grease.Shape}
          */
         off: function (event, handler) {
             if (event) {
@@ -140,11 +146,11 @@
 
         /**
          * Calls all handlers for a specific event
-         * @memberof grease.Entity
+         * @memberof grease.Shape
          * @param {string} type - Event type being triggered
          * @param {event} e - Removes a specific handler for a specific event
          * @param data
-         * @returns {grease.Entity}
+         * @returns {grease.Shape}
          */
         trigger: function (type, e, data) {
             _.each(this.events[type], function (handler) {
@@ -154,28 +160,29 @@
         },
 
         /**
-         * Unless the entity has bounds set against it, this should be implemented by a specific shape
-         * @memberof grease.Entity
+         * Unless the shape has bounds set against it, this should be implemented by a specific shape
+         * @memberof grease.Shape
          * @param coords
          * @returns {boolean}
          */
-        testBounds: function (coords) {
-            if (this.bounds) {
-                return this.bounds.testBounds(coords);
-            }
+        testBounds: function (coords, scale) {
+            return this.bounds ? this.bounds.testBounds(coords, scale) : false;
         },
 
         /**
-         * Move the entity's position. Animate if duration supplied
-         * @memberof grease.Entity
-         * @param position Position to move to or line to follow
+         * Move the shape's position. Animate if duration supplied
+         * @memberof grease.Shape
+         * @param position Position to move to or line to follow or a function that returns the required options
          * @param {number} duration Duration of animated movement
          * @param {function} easing
-         * @returns grease.Entity
+         * @returns grease.Shape
          * @throws {TypeError} Position provided is not valid
          */
         moveTo: function (position, duration, easing) {
-            if (duration) {
+            if (typeof position === 'function') {
+                var options = position.call(this);
+                return this.moveTo(options.position, options.duration, options.easing);
+            } else if (duration) {
                 // Uh, maths
             } else if (_.isNumber(position.x) && _.isNumber(position.y)) {
                 this.position = position;
@@ -187,13 +194,34 @@
 
         /**
          * Transform the shape
-         * @memberof grease.Entity
+         * @memberof grease.Shape
+         * @returns grease.Shape
          */
         transform: function () {
-
+            return this;
         }
 
     });
+
+    /**
+     * Extend the base Shape to create a new shape contructor
+     * @memberof grease.Shape
+     * @static
+     * @param methods
+     * @returns function
+     * @example var Star = grease.Shape.extend()
+     */
+    grease.Shape.extend = function (prototypeMethods, staticMethods) {
+        var Contructor = function () {
+            grease.Shape.call(this);
+            prototypeMethods.constructor.apply(this, Array.prototype.slice.call(arguments));
+        }
+
+        _.extend(Contructor, staticMethods);
+
+        return Contructor;
+    };
+
 
 
 
@@ -201,22 +229,21 @@
     /**
      * Represents a rectangle to be drawn
      * @constructor
-     * @param position Position of the rectangle
-     * @param position.x Horizontal position
-     * @param position.y Vertical position
-     * @param size Size of the rectangle
-     * @param size.w Width
-     * @param size.h Height
+     * @param {number} x Horizontal position
+     * @param {number} y Vertical position
+     * @param {number} width Width
+     * @param {number} height Height
      * @param {grease.Material} [material]
      */
-    grease.Rectangle = function (position, size, material) {
+    grease.Rectangle = function (x, y, width, height, material) {
         // Call parent constructor
-        grease.Entity.call(this, position, material);
-        this.size = size || {w: 0, h: 0};
+        grease.Shape.call(this, x, y, material);
+        this.width = width || 0;
+        this.height = height || 0;
     };
 
-    // Rectangle extends Entity
-    grease.Rectangle.prototype = Object.create(grease.Entity.prototype);
+    // Rectangle extends Shape
+    grease.Rectangle.prototype = Object.create(grease.Shape.prototype);
 
     _.extend(grease.Rectangle.prototype, {
 
@@ -237,7 +264,7 @@
         render: function (context, offset, scale) {
             scale = scale * this.scale;
             context.beginPath();
-            context.rect(this.position.x + offset.x, this.position.y + offset.y, this.size.w, this.size.h);
+            context.rect(this.position.x + offset.x, this.position.y + offset.y, this.width * scale, this.height * scale);
             context.closePath();
             this.applyMaterial(context, scale);
             return this;
@@ -250,8 +277,8 @@
          * @returns {boolean}
          */
         testBounds: function (coords, scale) {
-            var horizontal = coords.x >= this.position.x && coords.x <= this.position.x + this.size.w,
-                vertical = coords.y >= this.position.y && coords.y <= this.position.y + this.size.h;
+            var horizontal = coords.x >= this.position.x && coords.x <= this.position.x + this.width,
+                vertical = coords.y >= this.position.y && coords.y <= this.position.y + this.height;
 
             return horizontal && vertical;
         }
@@ -262,26 +289,25 @@
     /**
      * Represents an arc to be drawn
      * @constructor
-     * @param position Position of the rectangle
-     * @param position.x Horizontal position
-     * @param position.y Vertical position
+     * @param x Horizontal position
+     * @param y Vertical position
      * @param {number} radius Radius of the arc
      * @param {number} startAngle Angle to start the arc path from
      * @param {number} endAngle Angle to end the arc path
      * @param {grease.Material} [material]
      * @param {boolean} [direction] Draw path counter clockwise?
      */
-    grease.Arc = function (position, radius, startAngle, endAngle, material, direction) {
+    grease.Arc = function (x, y, radius, startAngle, endAngle, material, direction) {
         // Call parent constructor
-        grease.Entity.call(this, position, material);
+        grease.Shape.call(this, x, y, material);
         this.radius = radius;
         this.startAngle = startAngle;
         this.endAngle = endAngle;
         this.direction = direction || false;
     };
 
-    // Arc extends Entity
-    grease.Arc.prototype = Object.create(grease.Entity.prototype);
+    // Arc extends Shape
+    grease.Arc.prototype = Object.create(grease.Shape.prototype);
 
     _.extend(grease.Arc.prototype, {
 
@@ -336,15 +362,14 @@
     /**
      * Represents a circle to be drawn
      * @constructor
-     * @param position Position of the rectangle
-     * @param position.x Horizontal position
-     * @param position.y Vertical position
+     * @param x Horizontal position
+     * @param y Vertical position
      * @param {number} radius Radius of the circle
      * @param {grease.Material} [material]
      */
-    grease.Circle = function (position, radius, material) {
+    grease.Circle = function (x, y, radius, material) {
         // Call parent constructor
-        grease.Arc.call(this, position, radius, 0, math.PI*2, material);
+        grease.Arc.call(this, x, y, radius, 0, math.PI*2, material);
     };
 
     // Circle extends Arc
@@ -375,23 +400,233 @@
 
 
 
+
+
     /**
      * Forms a line of points. Can include quadratic or bezier curves
      * @constructor
+     * @param {object[]} points Array of points, each should contain x, y and any controlPoints needed for curves
      */
-    grease.Line = function () {
-        this.points = [];
+    grease.Line = function (points, material, fill) {
+        // Call parent constructor
+        grease.Shape.call(this, points[0].x, points[0].y, material);
+
+        // Determines whether or not the area the line surrounds should be filled - default is false
+        this.isOutline = !fill;
+        this.points = points || [];
     };
+
+    // Line extends Shape
+    grease.Line.prototype = Object.create(grease.Shape.prototype);
+
+    _.extend(grease.Line.prototype, {
+
+        /**
+         * Reference to constructor
+         * @memberof grease.Line
+         */
+        constructor: grease.Line,
+
+        /**
+         * Add a point or array of points to the line
+         * @memberof grease.Line
+         */
+        add: function (points) {
+            if (_.isArray(points)) {
+                _.each(points, function (point) {
+                    this.points.push(point);
+                }, this);
+            } else {
+                this.points.push(points);
+            }
+        },
+
+        /**
+         * Render the line to the context
+         * @memberof grease.Line
+         */
+        render: function (context, offset, scale) {
+            context.beginPath();
+
+            _.each(this.points, function (point, index) {
+                // The first point should just be moved to
+                if (index === 0) {
+                    context.moveTo(point.x, point.y);
+                } else {
+                    // The other points might be curved to depending on the existence of control points
+                    if (point.controlPoints) {
+                        if (point.controlPoints.length > 1) {
+                            context.bezierCurveTo(point.controlPoints[0].x, point.controlPoints[0].y, point.controlPoints[1].x, point.controlPoints[1].y, point.x, point.y);
+                        } else {
+                            content.quadraticCurveTo(point.controlPoints[0].x, point.controlPoints[0].y, point.x, point.y);
+                        }
+                    } else {
+                        context.lineTo(point.x, point.y);
+                    }
+                }
+            }, this);
+
+            context.closePath();
+            this.applyMaterial(context, scale);
+            return this;
+        }
+
+    });
+
+
 
 
 
     /**
      * Loads an image for use in a scene
      * @constructor
+     * @param {string} src Source path to image
+     * @param {number} x Horizontal position of image
+     * @param {number} y Vertical position of image
+     * @param {number} [width] Display width of image
+     * @param {number} [height] Display height of image
      */
-    grease.Image = function () {
+    grease.Image = function (src, x, y, width, height) {
+        // Call parent constructor
+        grease.Shape.call(this, x, y);
 
+        this.width = width;
+        this.height = height;
+
+        this.renderable = false;
+        this.elem = new root.Image();
+        this.elem.src = src;
+
+        this.elem.onload = this.onload.bind(this);
     };
+
+    // Image extends Shape - should it extend rectangle instead?
+    grease.Image.prototype = Object.create(grease.Shape.prototype);
+
+    _.extend(grease.Image.prototype, {
+
+        /**
+         * Reference to constructor
+         * @memberof grease.Image
+         */
+        constructor: grease.Image,
+
+        /**
+         * Called when the image element is loaded
+         * @memberof grease.Image
+         */
+        onload: function (e) {
+            // If a width and height was not provided, set them to the actual width/height of the image
+            this.width = this.width ? this.width : this.elem.width;
+            this.height = this.height ? this.height : this.elem.height;
+
+            this.renderable = true;
+            this.trigger('load', e);
+        },
+
+        /**
+         * Renders the image to the specified context
+         * @memberof grease.Image
+         * @param context
+         * @param offset Offset position determined by parent group
+         * @param {number} [scale]
+         * @returns {grease.Image}
+         */
+        render: function (context, offset, scale) {
+            scale = scale * this.scale;
+            context.drawImage(this.elem, this.position.x + offset.x, this.position.y + offset.y, this.width * scale, this.height * scale);
+            return this;
+        },
+
+        /**
+         * Tests the bounds of the image, either the bounds set, or a rectangle
+         * @memberof grease.Image
+         * @param coords
+         * @param {number} scale
+         * @return {boolean}
+         */
+        testBounds: function (coords, scale) {
+            if (this.bounds) {
+                return this.bounds.testBounds(coords, scale);
+            } else {
+                return grease.Rectangle.prototype.testBounds.call(this, coords, scale);
+            }
+        }
+
+    });
+
+
+
+    /**
+     * Represents a sprite
+     * @constructor
+     */
+    grease.Sprite = function () {
+        // Call parent constructor
+        grease.Shape.call(this, x, y);
+    };
+
+
+
+    /**
+     * Represents text to be drawn to a scene
+     * @constructor
+     * @param {string} text
+     */
+    grease.Text = function (text, x, y, material) {
+        // Call parent constructor
+        grease.Shape.call(this, x, y);
+
+        this.text = text;
+    };
+
+    // Text extends Shape
+    grease.Text.prototype = Object.create(grease.Shape.prototype);
+
+    _.extend(grease.Text.prototype, {
+
+        /**
+         * Reference to constructor
+         * @memberof grease.Text
+         */
+        constructor: grease.Text,
+
+        /**
+         * Apply the material to the text and draw to the canvas
+         * @memberof grease.Text
+         */
+        applyMaterial: function (context, scale) {
+            var mat = this.material;
+            if (mat.fillStyle) {
+                context.fillStyle = mat.fillStyle;
+                context.fillText(this.text, this.position.x, this.position.y);
+            }
+            if (mat.lineWidth) {
+                context.lineWidth = mat.lineWidth * scale;
+            }
+            if (mat.lineCap) {
+                context.lineCap = mat.lineCap;
+            }
+            if (mat.strokeStyle) {
+                context.strokeStyle = mat.strokeStyle;
+                context.strokeText(this.text, this.position.x, this.position.y);
+            }        
+        },
+
+        /**
+         * Renders the image to the specified context
+         * @memberof grease.Text
+         * @param context
+         * @param offset Offset position determined by parent group
+         * @param {number} [scale]
+         * @returns {grease.Text}
+         */
+        render: function (context, offset, scale) {
+            this.applyMaterial();
+            return this;
+        }
+
+    });
 
 
 
@@ -403,15 +638,19 @@
      * @param {string} opts.fillStyle
      * @param {string} opts.strokeStyle
      * @param {number} opts.lineWidth
+     * @param {string} opts.lineCap butt|round|square
+     * @param {string} opts.font Font style to use for text
      */
     grease.Material = function (opts) {
         this.fillStyle = opts.fillStyle;
         this.strokeStyle = opts.strokeStyle;
         this.lineWidth = opts.lineWidth || 0;
+        this.lineCap = opts.lineCap;
+        this.font = opts.font;
     };
 
     /**
-     * Default material for entities
+     * Default material for shapes
      */
     grease.defaultMaterial = new grease.Material({
         fillStyle: 'rgb(50, 100, 0)',
@@ -434,21 +673,21 @@
 
 
     /**
-     * Specifies a group of entities. Entities within the group will be positioned and scaled relative to the group
+     * Specifies a group of shapes. Shapes within the group will be positioned and scaled relative to the group
      * @constructor
-     * @param position Position of entity
+     * @param position Position of shape
      * @param position.x Horizontal position
      * @param position.y Vertical position
      */
-    grease.Group = function (position) {
+    grease.Group = function () {
         // Call parent constructor
-        grease.Entity.call(this, position);
-        this.entities = [];
+        grease.Shape.call(this);
+        this.shapes = [];
 
     };
 
-    // Group extends Entity
-    grease.Group.prototype = Object.create(grease.Entity.prototype);
+    // Group extends Shape
+    grease.Group.prototype = Object.create(grease.Shape.prototype);
 
     _.extend(grease.Group.prototype, {
 
@@ -459,7 +698,7 @@
         constructor: grease.Group,
 
         /**
-         * Render the group of entities
+         * Render the group of shapes
          * @memberof grease.Group
          * @param context
          * @param [offset] Offset position determined by the parent group
@@ -476,37 +715,37 @@
                 offset = this.position;
             }
             scale = scale || 1;
-            this.each(function (entity) {
-                if (entity.renderFlag) {
-                    entity.render(context, offset, this.scale * scale);
+            this.each(function (shape) {
+                if (shape.renderable) {
+                    shape.render(context, offset, this.scale * scale);
                 }
             });
         },
 
         /**
-         * Add an entity, group, or array of entities to a group
+         * Add an shape, group, or array of shapes to a group
          * @memberof grease.Group
-         * @param {(grease.Entity|grease.Entity[])} target
+         * @param {(grease.Shape|grease.Shape[])} target
          * @param {number} [zindex]
          * @returns {grease.Group}
-         * @throws {TypeError} Only entities can be added to groups
+         * @throws {TypeError} Only shapes can be added to groups
          */
         add: function (target, zindex) {
 
-            // Expect first argument as array or each argument as individual entity
-            var givenEntities = _.isArray(target) ? target : [target];
+            // Expect first argument as array or each argument as individual shape
+            var givenShapes = _.isArray(target) ? target : [target];
 
-            _.each(givenEntities, function (entity) {
-                if (entity instanceof grease.Entity) {
-                    // If a zindex is supplied, add the entity or entities at the supplied index, 
-                    // pushing forward any entities already at or above that index
+            _.each(givenShapes, function (shape) {
+                if (shape instanceof grease.Shape) {
+                    // If a zindex is supplied, add the shape or shapes at the supplied index, 
+                    // pushing forward any shapes already at or above that index
                     if (zindex) {
-                        this.entities.splice(zindex++, 0, entity);
+                        this.shapes.splice(zindex++, 0, shape);
                     } else {
-                        this.entities.push(entity);                  
+                        this.shapes.push(shape);                  
                     }
                 } else {
-                    throw new TypeError('Attempt to add a non-entity to the ' + typeof this + ' failed.');
+                    throw new TypeError('Attempt to add a non-shape to the ' + typeof this + ' failed.');
                 }
             }, this);
 
@@ -515,16 +754,16 @@
         },
 
         /**
-         * Remove a specified entity from the group
+         * Remove a specified shape from the group
          * @memberof grease.Group
-         * @param {grease.Entity} target
+         * @param {grease.Shape} target
          * @returns {grease.Group}
          */
         remove: function (target) {
 
-            this.each(function (entity, index) {
-                if (target === entity) {
-                    this.entities.splice(index, 1);
+            this.each(function (shape, index) {
+                if (target === shape) {
+                    this.shapes.splice(index, 1);
                 }
             });
 
@@ -533,16 +772,16 @@
         },
 
         /**
-         * Iterates over the group and calls the function passed to it, supplying entity and index and arguments
+         * Iterates over the group and calls the function passed to it, supplying shape and index and arguments
          * @memberof grease.Group
          * @param {function} callback
          * @returns {grease.Group}
          */
         each: function (callback) {
 
-            _.each(this.entities, function (entity, index) {
-                if (entity) {
-                    callback.call(this, entity, index);
+            _.each(this.shapes, function (shape, index) {
+                if (shape) {
+                    callback.call(this, shape, index);
                 }
             }, this);
 
@@ -556,15 +795,15 @@
          * @param coords
          * @param {number} scale
          * @returns match
-         * @returns {grease.Group} match.group The group that the matching entities are in
-         * @returns {grease.Entity[]} match.entities The entities that match the bounds
+         * @returns {grease.Group} match.group The group that the matching shapes are in
+         * @returns {grease.Shape[]} match.shapes The shapes that match the bounds
          */
         testBounds: function (coords, scale) {
             var test,
                 scale = this.scale * (scale || 1),
                 match = {
                     group: this,
-                    entities: []
+                    shapes: []
                 };
 
             // Offset the event coordinates by the position of the group
@@ -572,17 +811,17 @@
             coords.y -= this.position.y;
 
 
-            this.each(function (entity) {
-                test = entity.testBounds(coords, scale);
-                if (entity instanceof grease.Group) {
-                    if (test.entities.length) {
-                        // If the tested entity is a group, add the representation so we can bubble
-                        match.entities.push(test);
+            this.each(function (shape) {
+                test = shape.testBounds(coords, scale);
+                if (shape instanceof grease.Group) {
+                    if (test.shapes.length) {
+                        // If the tested shape is a group, add the representation so we can bubble
+                        match.shapes.push(test);
                     }
                 } else {
                     if (test) {
-                        // Otherwise just add the entity
-                        match.entities.push(entity);
+                        // Otherwise just add the shape
+                        match.shapes.push(shape);
                     }
                     
                 }
@@ -606,12 +845,12 @@
 
         // Call parent constructor
         // The position of the scene determines the camera position, the scale determines camera zoom
-        grease.Group.call(this, {x: 0, y: 0});
+        grease.Group.call(this);
 
         this.canvas = new grease.Canvas(selector);
         this.eventManager = new grease.EventManager(this);
 
-        this.entities = [];
+        this.shapes = [];
 
     };
 
@@ -663,7 +902,7 @@
 
             if (self.animating) {
                 root.requestAnimationFrame(function () {    
-                    self.trigger('frame', self.frameInfo);
+                    self.trigger('update', self.frameInfo);
                     self.canvas.clear();
                     self.render(self.canvas.getContext());
 
@@ -717,8 +956,6 @@
             'click',
             'mousedown',
             'mouseup',
-            'mouseover',
-            'mouseout',
             'mousemove',
             'dblclick'
         ],
@@ -764,22 +1001,22 @@
         },
 
         /**
-         * Find all entities matching the coordinates of the event
+         * Find all shapes matching the coordinates of the event
          * @memberof grease.EventManager
          */
         findMatches: function (e) {
             var offset = this.scene.canvas.offset(),
                 coords = {x: e.pageX - offset.left, y: e.pageY - offset.top},
-                matchingEntities = this.scene.testBounds(coords),
-                bubblePath = this.getBubblePath(matchingEntities);
+                matchingShapes = this.scene.testBounds(coords),
+                bubblePath = this.getBubblePath(matchingShapes);
 
-            _.each(bubblePath.reverse(), function (entity, index) {
+            _.each(bubblePath.reverse(), function (shape, index) {
 
                 if (index === 0) {
-                    e.actualTarget = entity;
+                    e.actualTarget = shape;
                 }
 
-                entity.trigger(e.type, e);
+                shape.trigger(e.type, e);
 
             }, this);
             
@@ -789,16 +1026,16 @@
          * Reformat the matches into an array ordered for bubbling
          * @memberof grease.EventManager
          */
-        getBubblePath: function (entity, path) {
+        getBubblePath: function (shape, path) {
             path = path || [];
 
-            if (entity.group) {
-                path.push(entity.group);
-                if (entity.entities.length) {
-                    this.getBubblePath(entity.entities[entity.entities.length - 1], path);                 
+            if (shape.group) {
+                path.push(shape.group);
+                if (shape.shapes.length) {
+                    this.getBubblePath(shape.shapes[shape.shapes.length - 1], path);                 
                 }
             } else {
-                path.push(entity);
+                path.push(shape);
             }
 
             return path;
