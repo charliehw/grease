@@ -26,9 +26,14 @@ window.onload = function () {
 
 	while (number--) {
 		mat = new grease.Material({fillStyle: 'rgb(' + random(0, 255) + ', ' + random(0, 255) + ', ' + random(0, 255) + ')'});
-		circle = new grease.Circle(random(40, 650), random(40, 500), random(10,50), mat);
+		circle = new grease.Circle({
+			x: random(40, 650), 
+			y: random(40, 500), 
+			radius: random(10,50), 
+			material: mat
+		});
 		circle.on('click', function (e) {
-			scene.remove(e.actualTarget);
+			scene.removeChild(e.actualTarget);
 		});
 		circles.push(circle);
 	}
@@ -44,10 +49,10 @@ window.onload = function () {
 
 	// Fixed time loop to update
 	window.setInterval(function () {
-		_.each(circles, function (circle) {
-			circle.moveTo({
-				x: circle.position.x += randomSign() * 2,
-				y: circle.position.y += randomSign() * 2
+		scene.eachChild(function () {
+			this.moveTo({
+				x: this.position.x += randomSign() * 2,
+				y: this.position.y += randomSign() * 2
 			});
 		});
 	}, 20);

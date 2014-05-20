@@ -55,18 +55,19 @@
     /**
      * Basic subclass drawable shape
      * @constructor
-     * @param {number} x Horizontal position
-     * @param {number} y Vertical position
-     * @param {grease.Material} [material]
+     * @param opts
+     * @param {number} opts.x Horizontal position
+     * @param {number} opts.y Vertical position
+     * @param {grease.Material} [opts.material]
      */
-    grease.Shape = function (x, y, material) {
+    grease.Shape = function (opts) {
         this.renderable = true;
-        this.position = {x: x || 0, y: y || 0};
-        this.material = material || grease.defaultMaterial;
+        this.position = {x: opts.x || 0, y: opts.y || 0};
+        this.material = opts.material || grease.defaultMaterial;
         this.scale = 1;
 
         this.events = {};
-        // States used by the event manager
+        // States used by the event manager for mouseover mouseout
         this.states = [];
     };
 
@@ -82,6 +83,7 @@
          * Apply the material to the canvas, called whilst the shape being rendered
          * @memberof grease.Shape
          * @param context
+         * @param {number} scale
          * @returns {grease.Shape}
          */
         applyMaterial: function (context, scale) {
@@ -207,17 +209,26 @@
      * Extend the base Shape to create a new shape contructor
      * @memberof grease.Shape
      * @static
-     * @param methods
+     * @param prototypeMethods
+     * @param staticMethods
      * @returns function
-     * @example var Star = grease.Shape.extend()
+     * @example var Star = grease.Shape.extend({
+     *              constructor: function (opts) {...}
+     *          });
      */
     grease.Shape.extend = function (prototypeMethods, staticMethods) {
-        var Contructor = function () {
-            grease.Shape.call(this);
-            prototypeMethods.constructor.apply(this, Array.prototype.slice.call(arguments));
+        var constructorToBeExtended = this;
+
+        function Contructor() {
+            var args = arguments.length ? Array.prototype.slice.call(arguments) : [{}];
+            constructorToBeExtended.apply(this, args);
+            prototypeMethods.constructor.apply(this, args);
         }
 
-        _.extend(Contructor, staticMethods);
+        _.extend(Contructor, {extend: arguments.callee}, staticMethods);
+
+        Contructor.prototype = Object.create(constructorToBeExtended.prototype);
+        _.extend(Contructor.prototype, prototypeMethods);
 
         return Contructor;
     };
@@ -229,29 +240,23 @@
     /**
      * Represents a rectangle to be drawn
      * @constructor
-     * @param {number} x Horizontal position
-     * @param {number} y Vertical position
-     * @param {number} width Width
-     * @param {number} height Height
-     * @param {grease.Material} [material]
+     * @param opts Rectangle options
+     * @param {number} opts.x Horizontal position
+     * @param {number} opts.y Vertical position
+     * @param {number} opts.width Width
+     * @param {number} opts.height Height
+     * @param {grease.Material} [opts.material]
      */
-    grease.Rectangle = function (x, y, width, height, material) {
-        // Call parent constructor
-        grease.Shape.call(this, x, y, material);
-        this.width = width || 0;
-        this.height = height || 0;
-    };
-
-    // Rectangle extends Shape
-    grease.Rectangle.prototype = Object.create(grease.Shape.prototype);
-
-    _.extend(grease.Rectangle.prototype, {
+    grease.Rectangle = grease.Shape.extend({
 
         /**
-         * Reference to the constructor
+         * @constructor
          * @memberof grease.Rectangle
          */
-        constructor: grease.Rectangle,
+        constructor: function (opts) {
+            this.width = opts.width || 0;
+            this.height = opts.height || 0;
+        },
 
         /**
          * Renders the rectangle to the scene
@@ -289,6 +294,7 @@
     /**
      * Represents an arc to be drawn
      * @constructor
+     * @param opts Arc options
      * @param x Horizontal position
      * @param y Vertical position
      * @param {number} radius Radius of the arc
@@ -297,25 +303,18 @@
      * @param {grease.Material} [material]
      * @param {boolean} [direction] Draw path counter clockwise?
      */
-    grease.Arc = function (x, y, radius, startAngle, endAngle, material, direction) {
-        // Call parent constructor
-        grease.Shape.call(this, x, y, material);
-        this.radius = radius;
-        this.startAngle = startAngle;
-        this.endAngle = endAngle;
-        this.direction = direction || false;
-    };
-
-    // Arc extends Shape
-    grease.Arc.prototype = Object.create(grease.Shape.prototype);
-
-    _.extend(grease.Arc.prototype, {
+    grease.Arc = grease.Shape.extend({
 
         /**
-         * Reference to constructor
+         * @constructor
          * @memberof grease.Arc
          */
-        constructor: grease.Arc,
+        constructor: function (opts) {
+            this.radius = opts.radius;
+            this.startAngle = opts.startAngle;
+            this.endAngle = opts.endAngle;
+            this.direction = opts.direction || false;
+        },
 
         /**
          * Render the Arc in a context
@@ -362,26 +361,22 @@
     /**
      * Represents a circle to be drawn
      * @constructor
-     * @param x Horizontal position
-     * @param y Vertical position
-     * @param {number} radius Radius of the circle
-     * @param {grease.Material} [material]
+     * @param opts Circle options
+     * @param {number} opts.x Horizontal position
+     * @param {number} opts.y Vertical position
+     * @param {number} opts.radius Radius of the circle
+     * @param {grease.Material} [opts.material]
      */
-    grease.Circle = function (x, y, radius, material) {
-        // Call parent constructor
-        grease.Arc.call(this, x, y, radius, 0, math.PI*2, material);
-    };
-
-    // Circle extends Arc
-    grease.Circle.prototype = Object.create(grease.Arc.prototype);
-
-    _.extend(grease.Circle.prototype, {
+    grease.Circle = grease.Arc.extend({
 
         /**
          * Reference to constructor
          * @memberof grease.Circle
          */
-        constructor: grease.Circle,
+        constructor: function (opts) {
+            this.startAngle = 0;
+            this.endAngle = math.PI*2;
+        },
 
         /**
          * Simpler version of the arc test bounds
@@ -407,25 +402,20 @@
      * @constructor
      * @param {object[]} points Array of points, each should contain x, y and any controlPoints needed for curves
      */
-    grease.Line = function (points, material, fill) {
-        // Call parent constructor
-        grease.Shape.call(this, points[0].x, points[0].y, material);
-
-        // Determines whether or not the area the line surrounds should be filled - default is false
-        this.isOutline = !fill;
-        this.points = points || [];
-    };
-
-    // Line extends Shape
-    grease.Line.prototype = Object.create(grease.Shape.prototype);
-
-    _.extend(grease.Line.prototype, {
+    grease.Line = grease.Shape.extend({
 
         /**
-         * Reference to constructor
+         * @constructor
          * @memberof grease.Line
          */
-        constructor: grease.Line,
+        constructor: function (points, material, fill) {
+            this.x = opts.points[0].x;
+            this.y = opts.points[0].y;
+
+            // Determines whether or not the area the line surrounds should be filled - default is false
+            this.isOutline = !opts.fill;
+            this.points = opts.points || [];
+        },
 
         /**
          * Add a point or array of points to the line
@@ -480,36 +470,29 @@
     /**
      * Loads an image for use in a scene
      * @constructor
-     * @param {string} src Source path to image
-     * @param {number} x Horizontal position of image
-     * @param {number} y Vertical position of image
-     * @param {number} [width] Display width of image
-     * @param {number} [height] Display height of image
+     * @param opts Image options
+     * @param {string} opts.src Source path to image
+     * @param {number} opts.x Horizontal position of image
+     * @param {number} opts.y Vertical position of image
+     * @param {number} [opts.width] Display width of image
+     * @param {number} [opts.height] Display height of image
      */
-    grease.Image = function (src, x, y, width, height) {
-        // Call parent constructor
-        grease.Shape.call(this, x, y);
-
-        this.width = width;
-        this.height = height;
-
-        this.renderable = false;
-        this.elem = new root.Image();
-        this.elem.src = src;
-
-        this.elem.onload = this.onload.bind(this);
-    };
-
-    // Image extends Shape - should it extend rectangle instead?
-    grease.Image.prototype = Object.create(grease.Shape.prototype);
-
-    _.extend(grease.Image.prototype, {
+    grease.Image = grease.Shape.extend({
 
         /**
-         * Reference to constructor
+         * @constructor
          * @memberof grease.Image
          */
-        constructor: grease.Image,
+        constructor: function (opts) {
+            this.width = opts.width;
+            this.height = opts.height;
+
+            this.renderable = false;
+            this.elem = new root.Image();
+            this.elem.src = opts.src;
+
+            this.elem.onload = this.onload.bind(this);
+        },
 
         /**
          * Called when the image element is loaded
@@ -561,10 +544,9 @@
      * Represents a sprite
      * @constructor
      */
-    grease.Sprite = function () {
-        // Call parent constructor
-        grease.Shape.call(this, x, y);
-    };
+    grease.Sprite = grease.Shape.extend({
+        constructor: function () {}
+    });
 
 
 
@@ -573,23 +555,15 @@
      * @constructor
      * @param {string} text
      */
-    grease.Text = function (text, x, y, material) {
-        // Call parent constructor
-        grease.Shape.call(this, x, y);
-
-        this.text = text;
-    };
-
-    // Text extends Shape
-    grease.Text.prototype = Object.create(grease.Shape.prototype);
-
-    _.extend(grease.Text.prototype, {
+    grease.Text = grease.Shape.extend({
 
         /**
-         * Reference to constructor
+         * @constructor
          * @memberof grease.Text
          */
-        constructor: grease.Text,
+        constructor: function (opts) {
+            this.text = opts.text;
+        },
 
         /**
          * Apply the material to the text and draw to the canvas
@@ -679,23 +653,16 @@
      * @param position.x Horizontal position
      * @param position.y Vertical position
      */
-    grease.Group = function () {
-        // Call parent constructor
-        grease.Shape.call(this);
-        this.shapes = [];
 
-    };
-
-    // Group extends Shape
-    grease.Group.prototype = Object.create(grease.Shape.prototype);
-
-    _.extend(grease.Group.prototype, {
+    grease.Group = grease.Shape.extend({
 
         /**
          * Reference to constructor
          * @memberof grease.Group
          */
-        constructor: grease.Group,
+        constructor: function () {
+            this.shapes = [];
+        },
 
         /**
          * Render the group of shapes
@@ -705,19 +672,20 @@
          * @param {number} [scale]
          */
         render: function (context, offset, scale) {
+            var self = this;
             // The group adds its position to provide its children with an offset
             if (offset) {
                 offset = {
-                    x: offset.x + this.position.x,
-                    y: offset.y + this.position.y
+                    x: offset.x + self.position.x,
+                    y: offset.y + self.position.y
                 }
             } else {
-                offset = this.position;
+                offset = self.position;
             }
             scale = scale || 1;
-            this.each(function (shape) {
-                if (shape.renderable) {
-                    shape.render(context, offset, this.scale * scale);
+            self.eachChild(function () {
+                if (this.renderable) {
+                    this.render(context, offset, self.scale * scale);
                 }
             });
         },
@@ -759,15 +727,15 @@
          * @param {grease.Shape} target
          * @returns {grease.Group}
          */
-        remove: function (target) {
-
-            this.each(function (shape, index) {
+        removeChild: function (target) {
+            var self = this;
+            this.eachChild(function (index, shape) {
                 if (target === shape) {
-                    this.shapes.splice(index, 1);
+                    self.shapes.splice(index, 1);
                 }
             });
 
-            return this;
+            return self;
 
         },
 
@@ -777,11 +745,11 @@
          * @param {function} callback
          * @returns {grease.Group}
          */
-        each: function (callback) {
+        eachChild: function (callback) {
 
             _.each(this.shapes, function (shape, index) {
                 if (shape) {
-                    callback.call(this, shape, index);
+                    callback.call(shape, index, shape);
                 }
             }, this);
 
@@ -811,9 +779,9 @@
             coords.y -= this.position.y;
 
 
-            this.each(function (shape) {
-                test = shape.testBounds(coords, scale);
-                if (shape instanceof grease.Group) {
+            this.eachChild(function () {
+                test = this.testBounds(coords, scale);
+                if (this instanceof grease.Group) {
                     if (test.shapes.length) {
                         // If the tested shape is a group, add the representation so we can bubble
                         match.shapes.push(test);
@@ -821,7 +789,7 @@
                 } else {
                     if (test) {
                         // Otherwise just add the shape
-                        match.shapes.push(shape);
+                        match.shapes.push(this);
                     }
                     
                 }
@@ -841,29 +809,21 @@
      * @constructor
      * @param {string} [selector] - Selector to match an existing canvas element
      */
-    grease.Scene = function (selector) {
-
-        // Call parent constructor
-        // The position of the scene determines the camera position, the scale determines camera zoom
-        grease.Group.call(this);
-
-        this.canvas = new grease.Canvas(selector);
-        this.eventManager = new grease.EventManager(this);
-
-        this.shapes = [];
-
-    };
-
-    // Scene extends Group
-    grease.Scene.prototype = Object.create(grease.Group.prototype);
-
-    _.extend(grease.Scene.prototype, {
+    grease.Scene = grease.Group.extend({
 
         /**
          * Reference to constructor
          * @memberof grease.Scene
          */
-        constructor: grease.Scene,
+        constructor: function (selector) {
+            // The position of the scene determines the camera position, the scale determines camera zoom
+
+            this.canvas = new grease.Canvas(selector);
+            this.eventManager = new grease.EventManager(this);
+
+            this.shapes = [];
+
+        },
 
         /**
          * Start the animation loop
