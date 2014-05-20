@@ -1,4 +1,5 @@
 {
+  "name": "grease",
   "engines": {
     "node": ">= 0.10.0"
   },

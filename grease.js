@@ -156,7 +156,7 @@
          */
         trigger: function (type, e, data) {
             _.each(this.events[type], function (handler) {
-                handler.call(this, e, data)
+                handler.call(this, e, data);
             }, this);
             return this;
         },
@@ -186,6 +186,9 @@
                 return this.moveTo(options.position, options.duration, options.easing);
             } else if (duration) {
                 // Uh, maths
+                if (easing) {
+
+                }          
             } else if (_.isNumber(position.x) && _.isNumber(position.y)) {
                 this.position = position;
             } else {
@@ -225,7 +228,7 @@
             prototypeMethods.constructor.apply(this, args);
         }
 
-        _.extend(Contructor, {extend: arguments.callee}, staticMethods);
+        _.extend(Contructor, {extend: constructorToBeExtended.extend}, staticMethods);
 
         Contructor.prototype = Object.create(constructorToBeExtended.prototype);
         _.extend(Contructor.prototype, prototypeMethods);
@@ -327,7 +330,7 @@
         render: function (context, offset, scale) {
             scale = scale * this.scale;
             context.beginPath();
-            context.arc(this.position.x + offset.x, this.position.y + offset.y, this.radius * scale, this.startAngle, this.endAngle, this.direction)
+            context.arc(this.position.x + offset.x, this.position.y + offset.y, this.radius * scale, this.startAngle, this.endAngle, this.direction);
             context.closePath();
             this.applyMaterial(context, scale);
             return this;
@@ -400,7 +403,10 @@
     /**
      * Forms a line of points. Can include quadratic or bezier curves
      * @constructor
-     * @param {object[]} points Array of points, each should contain x, y and any controlPoints needed for curves
+     * @param opts Line options
+     * @param {object[]} opts.points Array of points, each should contain x, y and any controlPoints needed for curves
+     * @param {grease.Material} [opts.material]
+     * @param {boolean} [opts.fill] Determines whether or not the area the line surrounds should be filled - default is false
      */
     grease.Line = grease.Shape.extend({
 
@@ -408,11 +414,10 @@
          * @constructor
          * @memberof grease.Line
          */
-        constructor: function (points, material, fill) {
+        constructor: function (opts) {
             this.x = opts.points[0].x;
             this.y = opts.points[0].y;
 
-            // Determines whether or not the area the line surrounds should be filled - default is false
             this.isOutline = !opts.fill;
             this.points = opts.points || [];
         },
@@ -448,7 +453,7 @@
                         if (point.controlPoints.length > 1) {
                             context.bezierCurveTo(point.controlPoints[0].x, point.controlPoints[0].y, point.controlPoints[1].x, point.controlPoints[1].y, point.x, point.y);
                         } else {
-                            content.quadraticCurveTo(point.controlPoints[0].x, point.controlPoints[0].y, point.x, point.y);
+                            context.quadraticCurveTo(point.controlPoints[0].x, point.controlPoints[0].y, point.x, point.y);
                         }
                     } else {
                         context.lineTo(point.x, point.y);
@@ -678,7 +683,7 @@
                 offset = {
                     x: offset.x + self.position.x,
                     y: offset.y + self.position.y
-                }
+                };
             } else {
                 offset = self.position;
             }
@@ -768,7 +773,7 @@
          */
         testBounds: function (coords, scale) {
             var test,
-                scale = this.scale * (scale || 1),
+                compoundScale = this.scale * (scale || 1),
                 match = {
                     group: this,
                     shapes: []
@@ -780,7 +785,7 @@
 
 
             this.eachChild(function () {
-                test = this.testBounds(coords, scale);
+                test = this.testBounds(coords, compoundScale);
                 if (this instanceof grease.Group) {
                     if (test.shapes.length) {
                         // If the tested shape is a group, add the representation so we can bubble
@@ -862,7 +867,7 @@
 
             if (self.animating) {
                 root.requestAnimationFrame(function () {    
-                    self.trigger('update', self.frameInfo);
+                    self.trigger('render', self.frameInfo);
                     self.canvas.clear();
                     self.render(self.canvas.getContext());
 
@@ -883,7 +888,7 @@
                     elapsed: 0,
                     frame: 0,
                     fps: 0
-                }
+                };
             } else {
                 this.frameInfo.elapsed = now - this.frameInfo.time;
                 this.frameInfo.time = now;
@@ -912,14 +917,14 @@
      * @static
      */
     grease.EventManager.events = {
-        mouse: [
+        MOUSE: [
             'click',
             'mousedown',
             'mouseup',
             'mousemove',
             'dblclick'
         ],
-        key: [
+        KEY: [
             'keyup',
             'keydown',
             'keypress'
@@ -942,16 +947,18 @@
             var self = this;
 
             // Set up canvas event handlers and delegation
-            _.each(grease.EventManager.events.mouse, function (event) {
+            _.each(grease.EventManager.events.MOUSE, function (event) {
                 self.scene.canvas.elem.addEventListener(event, function (e) {
+                    e.preventDefault();
                     if (self.captureEvents) {
-                        self.findMatches(e);
+                        var wrappedEvent = self.wrapEvent(e);
+                        self.findMatches(wrappedEvent);
                     }            
                 });
             });
 
             // Set up window event handlers for key events
-            _.each(grease.EventManager.events.key, function (event) {
+            _.each(grease.EventManager.events.KEY, function (event) {
                 root.addEventListener(event, function (e) {
                     if (self.captureEvents) {
                         self.scene.trigger(event, e);
@@ -965,21 +972,38 @@
          * @memberof grease.EventManager
          */
         findMatches: function (e) {
-            var offset = this.scene.canvas.offset(),
-                coords = {x: e.pageX - offset.left, y: e.pageY - offset.top},
-                matchingShapes = this.scene.testBounds(coords),
-                bubblePath = this.getBubblePath(matchingShapes);
+            var matchingShapes = this.scene.testBounds({x: e.x, y: e.y}),
+                bubblePath = this.getBubblePath(matchingShapes).reverse(),
+                shape;
 
-            _.each(bubblePath.reverse(), function (shape, index) {
+            for (var index = 0, length = bubblePath.length; index < length && !e.propagationStopped; index++) {
+                shape = bubblePath[index];
 
                 if (index === 0) {
-                    e.actualTarget = shape;
+                    e.target = shape;
                 }
 
                 shape.trigger(e.type, e);
 
-            }, this);
+                index++;
+            }
             
+        },
+
+        /**
+         * Wrap the event as a custom object so we can stop custom propagation
+         * @memberof grease.EventManager
+         */
+        wrapEvent: function (e) {
+            var offset = this.scene.canvas.offset();
+            return {
+                originalEvent: e,
+                x: e.pageX - offset.left,
+                y: e.pageY - offset.top,
+                type: e.type,
+                propagationStopped: false,
+                stopPropagation: function () {this.propagationStopped = true;}
+            };
         },
 
         /**

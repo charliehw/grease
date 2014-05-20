@@ -4,12 +4,10 @@ module.exports = function(grunt) {
   // Project configuration.
   grunt.initConfig({
     // Metadata.
-    pkg: grunt.file.readJSON('package.json'),
-    banner: '/*! <%= pkg.title || pkg.name %> - v<%= pkg.version %> - ' +
+    banner: '/*! grease.js - ' +
       '<%= grunt.template.today("yyyy-mm-dd") %>\n' +
-      '<%= pkg.homepage ? "* " + pkg.homepage + "\\n" : "" %>' +
-      '* Copyright (c) <%= grunt.template.today("yyyy") %> <%= pkg.author.name %>;' +
-      ' Licensed <%= _.pluck(pkg.licenses, "type").join(", ") %> */\n',
+      ' * Author: charliehw;' +
+      ' Licensed MIT */\n',
     // Task configuration.
     concat: {
       options: {
@@ -26,8 +24,8 @@ module.exports = function(grunt) {
         banner: '<%= banner %>'
       },
       dist: {
-        src: '<%= concat.dist.dest %>',
-        dest: 'dist/<%= pkg.name %>.min.js'
+        src: 'grease.js',
+        dest: 'grease.min.js'
       }
     },
     jshint: {
@@ -49,8 +47,8 @@ module.exports = function(grunt) {
       gruntfile: {
         src: 'Gruntfile.js'
       },
-      lib_test: {
-        src: ['lib/**/*.js', 'test/**/*.js']
+      grease: {
+        src: ['grease.js']
       }
     },
     qunit: {
@@ -62,8 +60,8 @@ module.exports = function(grunt) {
         tasks: ['jshint:gruntfile']
       },
       lib_test: {
-        files: '<%= jshint.lib_test.src %>',
-        tasks: ['jshint:lib_test', 'qunit']
+        files: '<%= jshint.grease.src %>',
+        tasks: ['jshint:grease', 'qunit']
       }
     }
   });
@@ -76,6 +74,6 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-watch');
 
   // Default task.
-  grunt.registerTask('default', ['jshint', 'qunit', 'concat', 'uglify']);
+  grunt.registerTask('default', ['jshint', 'qunit', 'uglify']);
 
 };

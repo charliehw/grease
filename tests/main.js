@@ -18,30 +18,40 @@ window.onload = function () {
 	
 	window.scene = new grease.Scene('#canvas');
 
-	var circles = [],
-		circle,
+	var shapes = [],
+		shape,
 		mat,
+		opts,
 		number = 100;
 
 
 	while (number--) {
 		mat = new grease.Material({fillStyle: 'rgb(' + random(0, 255) + ', ' + random(0, 255) + ', ' + random(0, 255) + ')'});
-		circle = new grease.Circle({
+
+		opts = {
 			x: random(40, 650), 
 			y: random(40, 500), 
-			radius: random(10,50), 
 			material: mat
+		};
+
+		if (number % 2 === 0) {
+			opts.radius = random(10,50);
+			shape = new grease.Circle(opts);
+		} else {
+			opts.width = random(20, 100);
+			opts.height = random(20, 100);
+			shape = new grease.Rectangle(opts);
+		}
+		shape.on('click', function (e) {
+			scene.removeChild(this);
 		});
-		circle.on('click', function (e) {
-			scene.removeChild(e.actualTarget);
-		});
-		circles.push(circle);
+		shapes.push(shape);
 	}
 
 
 
 	// Variable time loop for rendering - from requestAnimationFrame
-	scene.add(circles).on('update', function (info) {
+	scene.add(shapes).on('render', function (info) {
 		updateInfo(info);
 	}).start();
 
@@ -51,10 +61,10 @@ window.onload = function () {
 	window.setInterval(function () {
 		scene.eachChild(function () {
 			this.moveTo({
-				x: this.position.x += randomSign() * 2,
-				y: this.position.y += randomSign() * 2
+				x: this.position.x += randomSign(),
+				y: this.position.y += randomSign()
 			});
 		});
-	}, 20);
+	}, 1000/60);
 
 };
