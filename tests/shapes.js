@@ -22,12 +22,12 @@ test('Shape moveTo', function () {
 		y: 20
 	});
 
-	ok(shape.getPosition().x === 30 && shape.getPosition().y === 20, 'Shape position set correctly on construction');
+	ok(shape.position().x === 30 && shape.position().y === 20, 'Shape position set correctly on construction');
 
 	shape.moveTo({
 		x: 80,
 		y: 100
 	});
 
-	ok(shape.getPosition().x === 80 && shape.getPosition().y === 100, 'Shape moved to expected position');
+	ok(shape.position().x === 80 && shape.position().y === 100, 'Shape moved to expected position');
 });

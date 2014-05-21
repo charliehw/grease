@@ -1018,7 +1018,7 @@
          * @memberof grease.EventManager
          */
         findMatches: function (e) {
-            var matchingShapes = this.scene.testBounds({x: e.x, y: e.y}, scene.transform),
+            var matchingShapes = this.scene.testBounds({x: e.x, y: e.y}, this.scene.transform),
                 bubblePath = this.getBubblePath(matchingShapes).reverse(),
                 shape;
 
