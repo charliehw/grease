@@ -1,6 +1,6 @@
 // Test scene
 function random(a, b) {
-	return Math.floor(Math.random() * b) + a;
+	return Math.floor(Math.random()*(b-a+1)+a);
 }
 
 function randomSign() {
@@ -29,7 +29,7 @@ window.onload = function () {
 		mat = new grease.Material({fillStyle: 'rgb(' + random(0, 255) + ', ' + random(0, 255) + ', ' + random(0, 255) + ')'});
 
 		opts = {
-			x: random(40, 650), 
+			x: random(-650, 650), 
 			y: random(40, 500), 
 			material: mat
 		};
@@ -56,18 +56,39 @@ window.onload = function () {
 	}).start();
 
 
-
+	var moveLeft = true;
 	// Fixed time loop to update
 	window.setInterval(function () {
+		
+		var p = scene.position();
+
+		if (moveLeft) {
+			scene.moveTo({
+				x: p.x += 1,
+				y: p.y
+			});
+			if (p.x >= 320) {
+				moveLeft = false;
+			}
+		} else {
+			scene.moveTo({
+				x: p.x -= 1,
+				y: p.y
+			});
+			if (p.x <= 0) {
+				moveLeft = true;
+			}
+		}
+
+
+
 		scene.each(function () {
 			this.moveTo({
 				x: this.position().x += randomSign(),
 				y: this.position().y += randomSign()
 			});
-		}).moveTo({
-			x: scene.position().x += 1,
-			y: scene.position().y
 		});
+
 	}, 1000/60);
 
 };
