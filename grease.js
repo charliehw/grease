@@ -45,7 +45,7 @@
     grease.version = '0.0.0';
 
 
-    root.requestAnimationFrame = (function(){
+    root.requestAnimationFrame = (function () {
         return root.requestAnimationFrame || root.webkitRequestAnimationFrame || root.mozRequestAnimationFrame || function( callback ){
             root.setTimeout(callback, 1000 / 60);
         };
@@ -62,9 +62,16 @@
      */
     grease.Shape = function (opts) {
         this.renderable = true;
-        this.position = {x: opts.x || 0, y: opts.y || 0};
         this.material = opts.material || grease.defaultMaterial;
-        this.scale = 1;
+
+        this.transform = {
+            position: {
+                x: opts.x || 0,
+                y: opts.y || 0
+            },
+            scale: 1,
+            rotation: 0
+        };
 
         this.events = {};
         // States used by the event manager for mouseover mouseout
@@ -83,17 +90,18 @@
          * Apply the material to the canvas, called whilst the shape being rendered
          * @memberof grease.Shape
          * @param context
-         * @param {number} scale
+         * @param transform
+         * @param {number} transform.scale
          * @returns {grease.Shape}
          */
-        applyMaterial: function (context, scale) {
+        applyMaterial: function (context, transform) {
             var mat = this.material;
             if (mat.fillStyle && !this.isOutline) {
                 context.fillStyle = mat.fillStyle;
                 context.fill();
             }
             if (mat.lineWidth) {
-                context.lineWidth = mat.lineWidth * scale;
+                context.lineWidth = mat.lineWidth * transform.scale;
             }
             if (mat.lineCap) {
                 context.lineCap = mat.lineCap;
@@ -165,10 +173,11 @@
          * Unless the shape has bounds set against it, this should be implemented by a specific shape
          * @memberof grease.Shape
          * @param coords
+         * @param transform
          * @returns {boolean}
          */
-        testBounds: function (coords, scale) {
-            return this.bounds ? this.bounds.testBounds(coords, scale) : false;
+        testBounds: function (coords, transform) {
+            return this.bounds ? this.bounds.testBounds(coords, transform) : false;
         },
 
         /**
@@ -188,9 +197,11 @@
                 // Uh, maths
                 if (easing) {
 
-                }          
+                } else {
+
+                }
             } else if (_.isNumber(position.x) && _.isNumber(position.y)) {
-                this.position = position;
+                this.transform.position = position;
             } else {
                 throw new TypeError('Invalid position provided for moveTo operation.');
             }
@@ -198,12 +209,31 @@
         },
 
         /**
-         * Transform the shape
+         * Parent transforms are taken into account to render a shape. This function compunds the parent transform with the shape's transform
          * @memberof grease.Shape
-         * @returns grease.Shape
+         * @param transform
+         * @returns {object}
          */
-        transform: function () {
-            return this;
+        getAbsoluteTransform: function (transform) {
+            return {
+                position: {
+                    x: this.transform.position.x + (transform.position.x || 0),
+                    y: this.transform.position.y + (transform.position.y || 0),              
+                },
+                scale: this.transform.scale * (transform.scale || 1)
+            };
+        },
+
+        /**
+         * Get the relative position of the shape
+         * @memberof grease.Shape
+         * @returns {object}
+         */
+        position: function () {
+            return {
+                x: this.transform.position.x,
+                y: this.transform.position.y
+            };
         }
 
     });
@@ -216,7 +246,8 @@
      * @param staticMethods
      * @returns function
      * @example var Star = grease.Shape.extend({
-     *              constructor: function (opts) {...}
+     *              constructor: function (opts) {...},
+     *              render: function (context, transform) {...}
      *          });
      */
     grease.Shape.extend = function (prototypeMethods, staticMethods) {
@@ -265,16 +296,16 @@
          * Renders the rectangle to the scene
          * @memberof grease.Rectangle
          * @param context
-         * @param offset Offset determined by parent group
-         * @param {number} scale
+         * @param transform
          * @returns {grease.Rectangle}
          */
-        render: function (context, offset, scale) {
-            scale = scale * this.scale;
+        render: function (context, transform) {
+            transform = this.getAbsoluteTransform(transform);
+
             context.beginPath();
-            context.rect(this.position.x + offset.x, this.position.y + offset.y, this.width * scale, this.height * scale);
+            context.rect(transform.position.x, transform.position.y, this.width * transform.scale, this.height * transform.scale);
             context.closePath();
-            this.applyMaterial(context, scale);
+            this.applyMaterial(context, transform);
             return this;
         },
 
@@ -282,11 +313,13 @@
          * Check if coords land inside the rectangle
          * @memberof grease.Rectangle
          * @param coords
+         * @param transform
          * @returns {boolean}
          */
-        testBounds: function (coords, scale) {
-            var horizontal = coords.x >= this.position.x && coords.x <= this.position.x + this.width,
-                vertical = coords.y >= this.position.y && coords.y <= this.position.y + this.height;
+        testBounds: function (coords, transform) {
+            transform = this.getAbsoluteTransform(transform);
+            var horizontal = coords.x >= transform.position.x && coords.x <= transform.position.x + this.width * transform.scale,
+                vertical = coords.y >= transform.position.y && coords.y <= transform.position.y + this.height * transform.scale;
 
             return horizontal && vertical;
         }
@@ -298,13 +331,13 @@
      * Represents an arc to be drawn
      * @constructor
      * @param opts Arc options
-     * @param x Horizontal position
-     * @param y Vertical position
-     * @param {number} radius Radius of the arc
-     * @param {number} startAngle Angle to start the arc path from
-     * @param {number} endAngle Angle to end the arc path
-     * @param {grease.Material} [material]
-     * @param {boolean} [direction] Draw path counter clockwise?
+     * @param {number} opts.x Horizontal position
+     * @param {number} opts.y Vertical position
+     * @param {number} opts.radius Radius of the arc
+     * @param {number} opts.startAngle Angle to start the arc path from
+     * @param {number} opts.endAngle Angle to end the arc path
+     * @param {grease.Material} [opts.material]
+     * @param {boolean} [opts.direction] Draw path counter clockwise?
      */
     grease.Arc = grease.Shape.extend({
 
@@ -323,16 +356,16 @@
          * Render the Arc in a context
          * @memberof grease.Arc
          * @param context
-         * @param offset Offset position determined by parent group
-         * @param {number} [scale]
+         * @param transform
          * @returns {grease.Arc}
          */
-        render: function (context, offset, scale) {
-            scale = scale * this.scale;
+        render: function (context, transform) {
+            transform = this.getAbsoluteTransform(transform);
+
             context.beginPath();
-            context.arc(this.position.x + offset.x, this.position.y + offset.y, this.radius * scale, this.startAngle, this.endAngle, this.direction);
+            context.arc(transform.position.x, transform.position.y, this.radius * transform.scale, this.startAngle, this.endAngle, this.direction);
             context.closePath();
-            this.applyMaterial(context, scale);
+            this.applyMaterial(context, transform);
             return this;
         },
 
@@ -340,21 +373,33 @@
          * Check if a point is within the Arc
          * @memberof grease.Arc
          * @param coords
-         * @param {number} scale
+         * @param transform
          * @returns {boolean}
          */
-        testBounds: function (coords, scale) {
+        testBounds: function (coords, transform) {
+            transform = this.getAbsoluteTransform(transform);
             // Check angle is between start and end
-            var angle = math.atan2(coords.y - this.position.y, coords.x - this.position.x);
+            var angle = math.atan2(coords.y - transform.position.y, coords.x - transform.position.x);
             if (angle < 0) {
                 angle = (math.PI - angle) + math.PI;
             }
 
             // Check distance <= radius
-            var distance = math.sqrt(math.pow(coords.x - this.position.x, 2) + math.pow(coords.y - this.position.y, 2));
-            scale = this.scale * (scale || 1);
+            var distance = this.checkDistance(coords, transform);
 
-            return angle >= this.startAngle && angle <= this.endAngle && distance <= (this.radius + (this.material.lineWidth / 2)) * scale;
+            return angle >= this.startAngle && angle <= this.endAngle && distance;
+        },
+
+        /**
+         * Part of the test bounds check for Arcs. Also used by Circles
+         * @memberof grease.Arc
+         * @param coords
+         * @param transform
+         * @returns {boolean}
+         */
+        checkDistance: function (coords, transform) {
+            var distance = math.sqrt(math.pow(coords.x - transform.position.x, 2) + math.pow(coords.y - transform.position.y, 2));
+            return distance <= (this.radius + (this.material.lineWidth / 2)) * transform.scale;
         }
 
     });
@@ -373,10 +418,10 @@
     grease.Circle = grease.Arc.extend({
 
         /**
-         * Reference to constructor
+         * @constructor
          * @memberof grease.Circle
          */
-        constructor: function (opts) {
+        constructor: function () {
             this.startAngle = 0;
             this.endAngle = math.PI*2;
         },
@@ -385,13 +430,12 @@
          * Simpler version of the arc test bounds
          * @memberof grease.Circle
          * @param coords
-         * @param {number} scale
+         * @param transform
          * @return {boolean}
          */
-        testBounds: function (coords, scale) {
-            var distance = math.sqrt(math.pow(coords.x - this.position.x, 2) + math.pow(coords.y - this.position.y, 2));
-            scale = this.scale * (scale || 1);
-            return distance <= (this.radius + (this.material.lineWidth / 2)) * scale;
+        testBounds: function (coords, transform) {
+            transform = this.getAbsoluteTransform(transform);
+            return this.checkDistance(coords, transform);
         }
 
     });
@@ -415,8 +459,8 @@
          * @memberof grease.Line
          */
         constructor: function (opts) {
-            this.x = opts.points[0].x;
-            this.y = opts.points[0].y;
+            this.transform.position.x = opts.points[0].x;
+            this.transform.position.y = opts.points[0].y;
 
             this.isOutline = !opts.fill;
             this.points = opts.points || [];
@@ -440,7 +484,7 @@
          * Render the line to the context
          * @memberof grease.Line
          */
-        render: function (context, offset, scale) {
+        render: function (context, transform) {
             context.beginPath();
 
             _.each(this.points, function (point, index) {
@@ -462,7 +506,7 @@
             }, this);
 
             context.closePath();
-            this.applyMaterial(context, scale);
+            this.applyMaterial(context, transform);
             return this;
         }
 
@@ -516,13 +560,15 @@
          * Renders the image to the specified context
          * @memberof grease.Image
          * @param context
-         * @param offset Offset position determined by parent group
-         * @param {number} [scale]
+         * @param transform
+         * @param transform.position Position determined by parent group
+         * @param {number} [transform.scale]
          * @returns {grease.Image}
          */
-        render: function (context, offset, scale) {
-            scale = scale * this.scale;
-            context.drawImage(this.elem, this.position.x + offset.x, this.position.y + offset.y, this.width * scale, this.height * scale);
+        render: function (context, transform) {
+            transform = this.getAbsoluteTransform(transform);
+
+            context.drawImage(this.elem, transform.position.x, transform.position.y, this.width * transform.scale, this.height * transform.scale);
             return this;
         },
 
@@ -530,14 +576,14 @@
          * Tests the bounds of the image, either the bounds set, or a rectangle
          * @memberof grease.Image
          * @param coords
-         * @param {number} scale
+         * @param transform
          * @return {boolean}
          */
-        testBounds: function (coords, scale) {
+        testBounds: function (coords, transform) {
             if (this.bounds) {
-                return this.bounds.testBounds(coords, scale);
+                return this.bounds.testBounds(coords, transform);
             } else {
-                return grease.Rectangle.prototype.testBounds.call(this, coords, scale);
+                return grease.Rectangle.prototype.testBounds.call(this, coords, transform);
             }
         }
 
@@ -574,21 +620,21 @@
          * Apply the material to the text and draw to the canvas
          * @memberof grease.Text
          */
-        applyMaterial: function (context, scale) {
+        applyMaterial: function (context, transform) {
             var mat = this.material;
             if (mat.fillStyle) {
                 context.fillStyle = mat.fillStyle;
-                context.fillText(this.text, this.position.x, this.position.y);
+                context.fillText(this.text, this.transform.position.x, this.transform.position.y);
             }
             if (mat.lineWidth) {
-                context.lineWidth = mat.lineWidth * scale;
+                context.lineWidth = mat.lineWidth * transform.scale;
             }
             if (mat.lineCap) {
                 context.lineCap = mat.lineCap;
             }
             if (mat.strokeStyle) {
                 context.strokeStyle = mat.strokeStyle;
-                context.strokeText(this.text, this.position.x, this.position.y);
+                context.strokeText(this.text, this.transform.position.x, this.transform.position.y);
             }        
         },
 
@@ -596,12 +642,11 @@
          * Renders the image to the specified context
          * @memberof grease.Text
          * @param context
-         * @param offset Offset position determined by parent group
-         * @param {number} [scale]
+         * @param transform
          * @returns {grease.Text}
          */
-        render: function (context, offset, scale) {
-            this.applyMaterial();
+        render: function (context, transform) {
+            this.applyMaterial(context, transform);
             return this;
         }
 
@@ -642,8 +687,12 @@
      * Represents a gradient for use in a material
      * @constructor
      */
-    grease.Gradient = function () {
+    grease.Gradient = function (type) {
+        if (type === constants.LINEAR_GRADIENT_TYPE) {
 
+        } else if (type === constants.RADIAL_GRADIENT_TYPE) {
+
+        }
     };
 
 
@@ -662,7 +711,7 @@
     grease.Group = grease.Shape.extend({
 
         /**
-         * Reference to constructor
+         * @constructor
          * @memberof grease.Group
          */
         constructor: function () {
@@ -673,30 +722,24 @@
          * Render the group of shapes
          * @memberof grease.Group
          * @param context
-         * @param [offset] Offset position determined by the parent group
-         * @param {number} [scale]
+         * @param transform
+         * @param [transform.position] Position determined by the parent group
+         * @param {number} [transform.scale]
          */
-        render: function (context, offset, scale) {
+        render: function (context, transform) {
             var self = this;
             // The group adds its position to provide its children with an offset
-            if (offset) {
-                offset = {
-                    x: offset.x + self.position.x,
-                    y: offset.y + self.position.y
-                };
-            } else {
-                offset = self.position;
-            }
-            scale = scale || 1;
-            self.eachChild(function () {
+            transform = this.getAbsoluteTransform(transform);
+
+            self.each(function () {
                 if (this.renderable) {
-                    this.render(context, offset, self.scale * scale);
+                    this.render(context, transform);
                 }
             });
         },
 
         /**
-         * Add an shape, group, or array of shapes to a group
+         * Add a shape, group, or array of shapes to a group
          * @memberof grease.Group
          * @param {(grease.Shape|grease.Shape[])} target
          * @param {number} [zindex]
@@ -732,9 +775,9 @@
          * @param {grease.Shape} target
          * @returns {grease.Group}
          */
-        removeChild: function (target) {
+        remove: function (target) {
             var self = this;
-            this.eachChild(function (index, shape) {
+            this.each(function (index, shape) {
                 if (target === shape) {
                     self.shapes.splice(index, 1);
                 }
@@ -750,7 +793,7 @@
          * @param {function} callback
          * @returns {grease.Group}
          */
-        eachChild: function (callback) {
+        each: function (callback) {
 
             _.each(this.shapes, function (shape, index) {
                 if (shape) {
@@ -766,29 +809,25 @@
          * Creates a representation of the event targets to allow for bubbling in nested group structures
          * @memberof grease.Group
          * @param coords
-         * @param {number} scale
+         * @param transform
          * @returns match
          * @returns {grease.Group} match.group The group that the matching shapes are in
          * @returns {grease.Shape[]} match.shapes The shapes that match the bounds
          */
-        testBounds: function (coords, scale) {
+        testBounds: function (coords, transform) {
             var test,
-                compoundScale = this.scale * (scale || 1),
                 match = {
                     group: this,
                     shapes: []
                 };
 
-            // Offset the event coordinates by the position of the group
-            coords.x -= this.position.x;
-            coords.y -= this.position.y;
+            transform = this.getAbsoluteTransform(transform);
 
-
-            this.eachChild(function () {
-                test = this.testBounds(coords, compoundScale);
+            this.each(function () {
+                test = this.testBounds(coords, transform);
                 if (this instanceof grease.Group) {
                     if (test.shapes.length) {
-                        // If the tested shape is a group, add the representation so we can bubble
+                        // If the tested shape is a group, add the representation so we can bubble later
                         match.shapes.push(test);
                     }
                 } else {
@@ -812,18 +851,19 @@
     /**
      * Represents a scene, managing the canvas, animation, rendering etc.
      * @constructor
-     * @param {string} [selector] - Selector to match an existing canvas element
+     * @param {string|number} selectorOrWidth Selector to match an existing canvas element or width of new element
+     * @param {number} [height]
      */
     grease.Scene = grease.Group.extend({
 
         /**
-         * Reference to constructor
+         * @constructor
          * @memberof grease.Scene
          */
-        constructor: function (selector) {
+        constructor: function (selectorOrWidth, height) {
             // The position of the scene determines the camera position, the scale determines camera zoom
 
-            this.canvas = new grease.Canvas(selector);
+            this.canvas = new grease.Canvas(selectorOrWidth, height);
             this.eventManager = new grease.EventManager(this);
 
             this.shapes = [];
@@ -839,6 +879,7 @@
         start: function (userLoop) {
             this.updateFrameInfo();
             if (!this.animating) {
+                this.trigger('start', {type: 'start'});
                 this.animating = true;
                 this.animate(userLoop || this.userLoop);
             }
@@ -851,6 +892,7 @@
          * @returns {grease.Scene}
          */
         stop: function () {
+            this.trigger('stop', {type: 'stop'});
             this.animating = false;
             return this;
         },
@@ -869,7 +911,7 @@
                 root.requestAnimationFrame(function () {    
                     self.trigger('render', self.frameInfo);
                     self.canvas.clear();
-                    self.render(self.canvas.getContext());
+                    self.render(self.canvas.getContext(), self.transform);
 
                     self.updateFrameInfo();
 
@@ -895,6 +937,10 @@
                 this.frameInfo.frame++;
                 this.frameInfo.fps = root.parseInt(1000/this.frameInfo.elapsed);
             }
+        },
+
+        destroy: function () {
+            this.canvas.destroy();
         }
 
     });
@@ -972,7 +1018,7 @@
          * @memberof grease.EventManager
          */
         findMatches: function (e) {
-            var matchingShapes = this.scene.testBounds({x: e.x, y: e.y}),
+            var matchingShapes = this.scene.testBounds({x: e.x, y: e.y}, scene.transform),
                 bubblePath = this.getBubblePath(matchingShapes).reverse(),
                 shape;
 
@@ -1121,6 +1167,10 @@
             } while (elem.offsetParent);
 
             return offset;
+        },
+
+        destroy: function () {
+            this.elem.parentElement.removeChild(this.elem);
         }
 
     });
