@@ -61,7 +61,7 @@
      * @param {grease.Material} [opts.material]
      */
     grease.Shape = function (opts) {
-        this.renderable = true;
+        this.renderFlag = true;
         this.material = opts.material || grease.defaultMaterial;
 
         this.transform = {
@@ -69,13 +69,18 @@
                 x: opts.x || 0,
                 y: opts.y || 0
             },
-            scale: 1,
-            rotation: 0
+            scale: opts.scale || 1,
+            rotation: opts.rotation || 0
         };
 
+        // Container for event handlers
         this.events = {};
+
         // States used by the event manager for mouseover mouseout
         this.states = [];
+
+        // Updates used for animation
+        this.updateQueue = [];
     };
 
     _.extend(grease.Shape.prototype, {
@@ -194,12 +199,13 @@
                 var options = position.call(this);
                 return this.moveTo(options.position, options.duration, options.easing);
             } else if (duration) {
-                // Uh, maths
-                if (easing) {
-
-                } else {
-
-                }
+                this.updates.push({
+                    transform: {
+                        position: position,
+                    },
+                    duration: duration,
+                    easing: easing
+                });
             } else if (_.isNumber(position.x) && _.isNumber(position.y)) {
                 this.transform.position = position;
             } else {
@@ -230,10 +236,66 @@
          * @returns {object}
          */
         position: function () {
-            return {
-                x: this.transform.position.x,
-                y: this.transform.position.y
-            };
+            return this.transform.position;
+        },
+
+        /**
+         * Renders the shape by updating any animations and then drawing it
+         * @memberof grease.Shape
+         * @returns grease.Shape
+         */
+        render: function (context, transform, frameInfo) {
+            this.update(frameInfo);
+            this.draw(context, transform);
+            return this;
+        },
+
+        /**
+         * Update the shape based on any queued animations
+         * @memberof grease.Shape
+         * @returns grease.Shape
+         */
+        update: function (frameInfo) {
+            return this;
+        },
+
+        /**
+         * Add an animation to the shape's queue
+         * @memberof grease.Shape
+         * @returns grease.Shape
+         */
+        animate: function (transform, duration, easing) {
+            this.updates.push({
+                transform: transform,
+                duration: duration,
+                easing: easing
+            });
+
+            return this;
+        },
+
+        /**
+         * Stop the shape's animation
+         * @memberof grease.Shape
+         * @param {boolean} [clearQueue] Determines if the queue of animations should be cleared
+         * @param {boolean} [jumpToEnd] Determines if the current animation should be completed instantly or discarded
+         * @returns grease.Shape
+         */
+        stop: function (clearQueue, jumpToEnd) {
+            if (clearQueue) {
+                // Remove all but first update in queue
+                this.updateQueue.splice(1, this.updateQueue.length - 1);
+            }
+
+            if (jumpToEnd) {
+                // Comeplete the first update immediately
+                this.updateQueue[0].duration = 0;
+            } else {
+                // Remove the first update from the queue
+                this.updateQueue.splice(0, 1); 
+            }
+
+            return this;
         }
 
     });
@@ -293,13 +355,13 @@
         },
 
         /**
-         * Renders the rectangle to the scene
+         * Draw the rectangle to the scene
          * @memberof grease.Rectangle
          * @param context
          * @param transform
          * @returns {grease.Rectangle}
          */
-        render: function (context, transform) {
+        draw: function (context, transform) {
             transform = this.getAbsoluteTransform(transform);
 
             context.beginPath();
@@ -353,13 +415,13 @@
         },
 
         /**
-         * Render the Arc in a context
+         * Draw the Arc in a context
          * @memberof grease.Arc
          * @param context
          * @param transform
          * @returns {grease.Arc}
          */
-        render: function (context, transform) {
+        draw: function (context, transform) {
             transform = this.getAbsoluteTransform(transform);
 
             context.beginPath();
@@ -481,10 +543,10 @@
         },
 
         /**
-         * Render the line to the context
+         * Draw the line to the context
          * @memberof grease.Line
          */
-        render: function (context, transform) {
+        draw: function (context, transform) {
             context.beginPath();
 
             _.each(this.points, function (point, index) {
@@ -536,7 +598,7 @@
             this.width = opts.width;
             this.height = opts.height;
 
-            this.renderable = false;
+            this.renderFlag = false;
             this.elem = new root.Image();
             this.elem.src = opts.src;
 
@@ -552,12 +614,12 @@
             this.width = this.width ? this.width : this.elem.width;
             this.height = this.height ? this.height : this.elem.height;
 
-            this.renderable = true;
+            this.renderFlag = true;
             this.trigger('load', e);
         },
 
         /**
-         * Renders the image to the specified context
+         * Draw the image to the specified context
          * @memberof grease.Image
          * @param context
          * @param transform
@@ -565,7 +627,7 @@
          * @param {number} [transform.scale]
          * @returns {grease.Image}
          */
-        render: function (context, transform) {
+        draw: function (context, transform) {
             transform = this.getAbsoluteTransform(transform);
 
             context.drawImage(this.elem, transform.position.x, transform.position.y, this.width * transform.scale, this.height * transform.scale);
@@ -639,13 +701,13 @@
         },
 
         /**
-         * Renders the image to the specified context
+         * Draw the image to the specified context
          * @memberof grease.Text
          * @param context
          * @param transform
          * @returns {grease.Text}
          */
-        render: function (context, transform) {
+        draw: function (context, transform) {
             this.applyMaterial(context, transform);
             return this;
         }
@@ -719,23 +781,25 @@
         },
 
         /**
-         * Render the group of shapes
+         * Draw the group of shapes
          * @memberof grease.Group
          * @param context
          * @param transform
          * @param [transform.position] Position determined by the parent group
          * @param {number} [transform.scale]
+         * @returns grease.Group
          */
-        render: function (context, transform) {
-            var self = this;
+        draw: function (context, transform) {
             // The group adds its position to provide its children with an offset
             transform = this.getAbsoluteTransform(transform);
 
-            self.each(function () {
-                if (this.renderable) {
+            this.each(function () {
+                if (this.renderFlag) {
                     this.render(context, transform);
                 }
             });
+
+            return this;
         },
 
         /**
@@ -873,15 +937,13 @@
         /**
          * Start the animation loop
          * @memberof grease.Scene
-         * @param {function} userLoop
          * @returns {grease.Scene}
          */
-        start: function (userLoop) {
-            this.updateFrameInfo();
+        start: function () {
             if (!this.animating) {
                 this.trigger('start', {type: 'start'});
                 this.animating = true;
-                this.animate(userLoop || this.userLoop);
+                this.loop();
             }
             return this;
         },
@@ -900,22 +962,20 @@
         /**
          * Internal animation loop
          * @memberof grease.Scene
-         * @param {function} userLoop
          * @returns {grease.Scene}
          */
-        animate: function (userLoop) {
+        loop: function () {
             var self = this;
-            this.userLoop = userLoop;
 
             if (self.animating) {
                 root.requestAnimationFrame(function () {    
+                    self.updateFrameInfo();
                     self.trigger('render', self.frameInfo);
                     self.canvas.clear();
-                    self.render(self.canvas.getContext(), self.transform);
 
-                    self.updateFrameInfo();
+                    self.render(self.canvas.getContext(), self.transform, self.frameInfo);
 
-                    self.animate(userLoop);
+                    self.loop();
                 });
             }
 

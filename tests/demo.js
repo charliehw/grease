@@ -3,10 +3,6 @@ function random(a, b) {
 	return Math.floor(Math.random()*(b-a+1)+a);
 }
 
-function randomSign() {
-	return Math.round(Math.random()) * 2 - 1;
-}
-
 var updateInfo = (function () {
 	var fps = document.querySelector('#fps');
 	return function (info) {
@@ -84,8 +80,8 @@ window.onload = function () {
 
 		scene.each(function () {
 			this.moveTo({
-				x: this.position().x += randomSign(),
-				y: this.position().y += randomSign()
+				x: this.position().x += random(-1, 1),
+				y: this.position().y += random(-1, 1)
 			});
 		});
 
