@@ -2,6 +2,7 @@ module('grease.Scene tests');
 
 
 test('Canvas creation and deletion', function () {
+	ok(document.getElementsByTagName('canvas').length === 0, 'No canvas in document before scene construction');
 	var scene = new grease.Scene(200, 200);
 
 	ok(document.getElementsByTagName('canvas').length === 1, 'Canvas created by scene construction');

@@ -52,7 +52,7 @@ module.exports = function(grunt) {
       }
     },
     qunit: {
-      all: ['tests/scene.html', 'tests/shapes.html']
+      all: ['tests/scene.html', 'tests/shapes.html', 'tests/group.html']
     },
     watch: {
       gruntfile: {
