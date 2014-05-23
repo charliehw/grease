@@ -226,7 +226,8 @@
                     x: this.transform.position.x + (transform.position.x || 0),
                     y: this.transform.position.y + (transform.position.y || 0),              
                 },
-                scale: this.transform.scale * (transform.scale || 1)
+                scale: this.transform.scale * (transform.scale || 1),
+                rotation: this.transform.scale + (transform.rotation || 0)
             };
         },
 
@@ -246,16 +247,20 @@
          */
         render: function (context, transform, frameInfo) {
             this.update(frameInfo);
+
+            transform = this.getAbsoluteTransform(transform);
             this.draw(context, transform);
+
             return this;
         },
 
         /**
          * Update the shape based on any queued animations
          * @memberof grease.Shape
+         * @param frameInfo Includes information on the current frame
          * @returns grease.Shape
          */
-        update: function (frameInfo) {
+        update: function () {
             return this;
         },
 
@@ -309,7 +314,7 @@
      * @returns function
      * @example var Star = grease.Shape.extend({
      *              constructor: function (opts) {...},
-     *              render: function (context, transform) {...}
+     *              draw: function (context, transform) {...}
      *          });
      */
     grease.Shape.extend = function (prototypeMethods, staticMethods) {
@@ -362,8 +367,6 @@
          * @returns {grease.Rectangle}
          */
         draw: function (context, transform) {
-            transform = this.getAbsoluteTransform(transform);
-
             context.beginPath();
             context.rect(transform.position.x, transform.position.y, this.width * transform.scale, this.height * transform.scale);
             context.closePath();
@@ -422,8 +425,6 @@
          * @returns {grease.Arc}
          */
         draw: function (context, transform) {
-            transform = this.getAbsoluteTransform(transform);
-
             context.beginPath();
             context.arc(transform.position.x, transform.position.y, this.radius * transform.scale, this.startAngle, this.endAngle, this.direction);
             context.closePath();
@@ -627,10 +628,12 @@
          * @param {number} [transform.scale]
          * @returns {grease.Image}
          */
-        draw: function (context, transform) {
-            transform = this.getAbsoluteTransform(transform);
-
-            context.drawImage(this.elem, transform.position.x, transform.position.y, this.width * transform.scale, this.height * transform.scale);
+        draw: function (context, transform, clip) {
+            if (clip) {
+                context.drawImage(this.elem, clip.x, clip.y, clip.width, clip.height, transform.position.x, transform.position.y, this.width * transform.scale, this.height * transform.scale);
+            } else {
+                context.drawImage(this.elem, transform.position.x, transform.position.y, this.width * transform.scale, this.height * transform.scale);                
+            }
             return this;
         },
 
@@ -658,7 +661,41 @@
      * @constructor
      */
     grease.Sprite = grease.Shape.extend({
-        constructor: function () {}
+        constructor: function (opts) {
+            var self = this;
+
+            this.rows = opts.rows;
+            this.cols = opts.cols;
+            this.cells = this.rows * this.cols;
+
+            this.image = new grease.Image({
+                src: opts.src
+            }).on('load', function () {
+                this.width = self.cellWidth = this.width / self.cols;
+                this.height = self.cellHeight = this.height / self.rows;
+            });
+
+            this.activeCell = 0;
+        },
+
+        draw: function (context, transform) {
+            var clip = {
+                x: (this.activeCell % this.cols) * this.cellWidth,
+                y: (this.activeCell % this.rows) * this.cellHeight,
+                width: this.cellWidth,
+                height: this.cellHeight
+            };
+            this.image.draw(context, transform, clip);
+            return this;
+        },
+
+        step: function () {
+            if (this.activeCell < this.cells - 1) {
+                this.activeCell++;
+            } else {
+                this.activeCell = 0;
+            }
+        }
     });
 
 
@@ -765,9 +802,7 @@
     /**
      * Specifies a group of shapes. Shapes within the group will be positioned and scaled relative to the group
      * @constructor
-     * @param position Position of shape
-     * @param position.x Horizontal position
-     * @param position.y Vertical position
+     * @param opts
      */
 
     grease.Group = grease.Shape.extend({
@@ -778,6 +813,7 @@
          */
         constructor: function () {
             this.shapes = [];
+            this.length = 0;
         },
 
         /**
@@ -790,9 +826,6 @@
          * @returns grease.Group
          */
         draw: function (context, transform) {
-            // The group adds its position to provide its children with an offset
-            transform = this.getAbsoluteTransform(transform);
-
             this.each(function () {
                 if (this.renderFlag) {
                     this.render(context, transform);
@@ -829,6 +862,8 @@
                 }
             }, this);
 
+            this.length = this.shapes.length;
+
             return this;
 
         },
@@ -846,6 +881,8 @@
                     self.shapes.splice(index, 1);
                 }
             });
+
+            this.length = this.shapes.length;
 
             return self;
 

@@ -87,4 +87,18 @@ window.onload = function () {
 
 	}, 1000/60);
 
+
+	var imageScene = new grease.Scene(700, 500);
+	var sprite = new grease.Sprite({
+		src: 'img/walksequence.png',
+		rows: 5,
+		cols: 6
+	});
+
+	imageScene.add(sprite).start().on('render', function (info) {
+		if (info.frame % 5 === 0) {
+			sprite.step();
+		}
+	});
+
 };
