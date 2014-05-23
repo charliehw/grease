@@ -18,7 +18,7 @@ window.onload = function () {
 		shape,
 		mat,
 		opts,
-		number = 1000;
+		number = 100;
 
 
 	while (number--) {

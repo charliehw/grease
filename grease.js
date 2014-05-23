@@ -661,6 +661,11 @@
      * @constructor
      */
     grease.Sprite = grease.Shape.extend({
+
+        /**
+         * @constructor
+         * @memberof grease.Sprite
+         */
         constructor: function (opts) {
             var self = this;
 
@@ -678,6 +683,11 @@
             this.activeCell = 0;
         },
 
+        /**
+         * Draw the sprite to the screen
+         * @memberof grease.Sprite
+         * @returns grease.Sprite
+         */
         draw: function (context, transform) {
             var clip = {
                 x: (this.activeCell % this.cols) * this.cellWidth,
@@ -689,12 +699,18 @@
             return this;
         },
 
+        /**
+         * Step the sprite forward to the next cell in the sequence
+         * @memberof grease.Sprite
+         * @returns grease.Sprite
+         */
         step: function () {
             if (this.activeCell < this.cells - 1) {
                 this.activeCell++;
             } else {
                 this.activeCell = 0;
             }
+            return this;
         }
     });
 
