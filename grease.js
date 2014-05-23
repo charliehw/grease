@@ -191,7 +191,7 @@
          * @param position Position to move to or line to follow or a function that returns the required options
          * @param {number} duration Duration of animated movement
          * @param {function} easing
-         * @returns grease.Shape
+         * @returns {grease.Shape}
          * @throws {TypeError} Position provided is not valid
          */
         moveTo: function (position, duration, easing) {
@@ -243,7 +243,7 @@
         /**
          * Renders the shape by updating any animations and then drawing it
          * @memberof grease.Shape
-         * @returns grease.Shape
+         * @returns {grease.Shape}
          */
         render: function (context, transform, frameInfo) {
             this.update(frameInfo);
@@ -258,7 +258,7 @@
          * Update the shape based on any queued animations
          * @memberof grease.Shape
          * @param frameInfo Includes information on the current frame
-         * @returns grease.Shape
+         * @returns {grease.Shape}
          */
         update: function () {
             return this;
@@ -267,7 +267,7 @@
         /**
          * Add an animation to the shape's queue
          * @memberof grease.Shape
-         * @returns grease.Shape
+         * @returns {grease.Shape}
          */
         animate: function (transform, duration, easing) {
             this.updates.push({
@@ -284,7 +284,7 @@
          * @memberof grease.Shape
          * @param {boolean} [clearQueue] Determines if the queue of animations should be cleared
          * @param {boolean} [jumpToEnd] Determines if the current animation should be completed instantly or discarded
-         * @returns grease.Shape
+         * @returns {grease.Shape}
          */
         stop: function (clearQueue, jumpToEnd) {
             if (clearQueue) {
@@ -311,7 +311,7 @@
      * @static
      * @param prototypeMethods
      * @param staticMethods
-     * @returns function
+     * @returns {function}
      * @example var Star = grease.Shape.extend({
      *              constructor: function (opts) {...},
      *              draw: function (context, transform) {...}
@@ -624,8 +624,7 @@
          * @memberof grease.Image
          * @param context
          * @param transform
-         * @param transform.position Position determined by parent group
-         * @param {number} [transform.scale]
+         * @param [clip]
          * @returns {grease.Image}
          */
         draw: function (context, transform, clip) {
@@ -665,6 +664,7 @@
         /**
          * @constructor
          * @memberof grease.Sprite
+         * @param opts
          */
         constructor: function (opts) {
             var self = this;
@@ -686,7 +686,9 @@
         /**
          * Draw the sprite to the screen
          * @memberof grease.Sprite
-         * @returns grease.Sprite
+         * @param context
+         * @param transform
+         * @returns {grease.Sprite}
          */
         draw: function (context, transform) {
             var clip = {
@@ -695,14 +697,18 @@
                 width: this.cellWidth,
                 height: this.cellHeight
             };
-            this.image.draw(context, transform, clip);
+
+            if (this.image.renderFlag) {
+                this.image.draw(context, transform, clip);
+            }
+
             return this;
         },
 
         /**
          * Step the sprite forward to the next cell in the sequence
          * @memberof grease.Sprite
-         * @returns grease.Sprite
+         * @returns {grease.Sprite}
          */
         step: function () {
             if (this.activeCell < this.cells - 1) {
@@ -839,7 +845,7 @@
          * @param transform
          * @param [transform.position] Position determined by the parent group
          * @param {number} [transform.scale]
-         * @returns grease.Group
+         * @returns {grease.Group}
          */
         draw: function (context, transform) {
             this.each(function () {
@@ -983,8 +989,6 @@
             this.canvas = new grease.Canvas(selectorOrWidth, height);
             this.eventManager = new grease.EventManager(this);
 
-            this.shapes = [];
-
         },
 
         /**
@@ -1127,8 +1131,9 @@
         },
 
         /**
-         * Find all shapes matching the coordinates of the event
+         * Find all shapes matching the coordinates of the event and trigger that event on matches
          * @memberof grease.EventManager
+         * @param {greasyEvent} e
          */
         findMatches: function (e) {
             var matchingShapes = this.scene.testBounds({x: e.x, y: e.y}, this.scene.transform),
@@ -1152,6 +1157,8 @@
         /**
          * Wrap the event as a custom object so we can stop custom propagation
          * @memberof grease.EventManager
+         * @param {event} e
+         * @returns {greasyEvent}
          */
         wrapEvent: function (e) {
             var offset = this.scene.canvas.offset();
@@ -1229,6 +1236,10 @@
          */
         constructor: grease.Canvas,
 
+        /**
+         * Get the drawing context, either from cache or from the HTML element
+         * @memberof grease.Canvas
+         */
         getContext: function (type) {
 
             if (!this._context || type) {
@@ -1238,6 +1249,11 @@
 
         },
 
+        /**
+         * Clear the canvas
+         * @memberof grease.Canvas
+         * @returns {grease.Canvas}
+         */
         clear: function (coords) {
             coords = coords || {
                 x: 0,
@@ -1251,39 +1267,75 @@
 
         },
 
+        /**
+         * Returns the coordinates of the center point in the canvas
+         * @memberof grease.Canvas
+         */
         centerPoint: function () {
             return {
-                x: this.width() / 2,
-                y: this.height() / 2
+                x: math.floor(this.width() / 2),
+                y: math.floor(this.height() / 2)
             };
         },
 
+        /**
+         * Get the width of the canvas
+         * @memberof grease.Canvas
+         * @returns {number}
+         */
         width: function () {
             return this.elem.width;
         },
 
+        /**
+         * Get the height of the canvas
+         * @memberof grease.Canvas
+         * @returns {number}
+         */
         height: function () {
             return this.elem.height;
         },
 
+        /**
+         * Get the offset of the canvas within the document
+         * @memberof grease.Canvas
+         */
         offset: function () {
-            var elem = this.elem;
-            var offset = {
-                left: elem.offsetLeft,
-                top: elem.offsetTop
-            };
+            var offset, elem;
 
-            do {
-                elem = elem.offsetParent;
-                offset.left += elem.offsetLeft;
-                offset.top += elem.offsetTop;
-            } while (elem.offsetParent);
+            if (this.offset) {
+                // Use the cached offset if it is available
+                // We are assuming the canvas itself will not move so we don't have to calculate this all the time
+                offset = this.offset;
+            } else {
+                // Calculate the offset by summing up all offset throughout the document hierarchy
+                elem = this.elem;
+                offset = {
+                    left: elem.offsetLeft,
+                    top: elem.offsetTop
+                };
+
+                do {
+                    elem = elem.offsetParent;
+                    offset.left += elem.offsetLeft;
+                    offset.top += elem.offsetTop;
+                } while (elem.offsetParent);
+
+                // Then cache it
+                this.offset = offset;
+            }
 
             return offset;
         },
 
+        /**
+         * Remove the canvas from the document
+         * @memberof grease.Canvas
+         * @returns {grease.Canvas}
+         */
         destroy: function () {
             this.elem.parentElement.removeChild(this.elem);
+            return this;
         }
 
     });
