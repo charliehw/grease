@@ -45,7 +45,6 @@ window.onload = function () {
 	}
 
 
-
 	// Variable time loop for rendering - from requestAnimationFrame
 	scene.add(shapes).on('render', function (info) {
 		updateInfo(info);
@@ -59,29 +58,25 @@ window.onload = function () {
 		var p = scene.position();
 
 		if (moveLeft) {
-			scene.moveTo({
-				x: p.x += 1,
-				y: p.y
+			scene.move({
+				x: 1
 			});
 			if (p.x >= 320) {
 				moveLeft = false;
 			}
 		} else {
-			scene.moveTo({
-				x: p.x -= 1,
-				y: p.y
+			scene.move({
+				x: -1
 			});
 			if (p.x <= 0) {
 				moveLeft = true;
 			}
 		}
 
-
-
 		scene.each(function () {
-			this.moveTo({
-				x: this.position().x += random(-1, 1),
-				y: this.position().y += random(-1, 1)
+			this.move({
+				x: random(-1, 1),
+				y: random(-1, 1)
 			});
 		});
 
@@ -95,7 +90,7 @@ window.onload = function () {
 		cells: 29 // Skipping the last image
 	});
 
-	sprite.on('click', function (e) {
+	sprite.move({x: 100, y: 50}, 1000).on('click', function (e) {
 		scene.remove(this);
 	});
 

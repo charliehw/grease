@@ -168,7 +168,7 @@
          * @memberof grease.Shape
          * @param {string} type - Event type being triggered
          * @param {event} e - Removes a specific handler for a specific event
-         * @param data
+         * @param [data]
          * @returns {grease.Shape}
          */
         trigger: function (type, e, data) {
@@ -215,25 +215,22 @@
          * Move the shape's position. Animate if duration supplied
          * @memberof grease.Shape
          * @param position Position to move to or line to follow or a function that returns the required options
-         * @param {number} duration Duration of animated movement
-         * @param {function} easing
+         * @param {number} [duration] Duration of animated movement
+         * @param {function} [easing]
          * @returns {grease.Shape}
          * @throws {TypeError} Position provided is not valid
          */
-        moveTo: function (position, duration, easing) {
+        move: function (position, duration, easing) {
             if (typeof position === 'function') {
                 var options = position.call(this);
                 return this.moveTo(options.position, options.duration, options.easing);
             } else if (duration) {
-                this.updates.push({
-                    transform: {
-                        position: position,
-                    },
-                    duration: duration,
-                    easing: easing
-                });
-            } else if (_.isNumber(position.x) && _.isNumber(position.y)) {
-                this.transform.position = position;
+                this.animate({
+                    position: position
+                }, duration, easing);
+            } else if (_.isNumber(position.x) || _.isNumber(position.y)) {
+                this.transform.position.x += position.x || 0;
+                this.transform.position.y += position.y || 0;
             } else {
                 throw new TypeError('Invalid position provided for moveTo operation.');
             }
@@ -269,13 +266,16 @@
         /**
          * Renders the shape by updating any animations and then drawing it
          * @memberof grease.Shape
+         * @param context
+         * @param transform
+         * @param frameInfo
          * @returns {grease.Shape}
          */
         render: function (context, transform, frameInfo) {
             this.update(frameInfo);
 
             transform = this.getAbsoluteTransform(transform);
-            this.draw(context, transform);
+            this.draw(context, transform, frameInfo);
 
             return this;
         },
@@ -286,20 +286,56 @@
          * @param frameInfo Includes information on the current frame
          * @returns {grease.Shape}
          */
-        update: function () {
+        update: function (frameInfo) {
+            if (!this.updateQueue.length) {
+                return this;
+            }
+
+            var update = this.updateQueue[0],
+                ratio,
+                deltaX,
+                deltaY;
+
+            if (update.elapsed + frameInfo.elapsed > update.duration) {
+                // If the frame overlaps the end of the animation, just do the last bit of the animation
+                ratio = (update.duration - update.elapsed) / update.duration;
+            } else {
+                // Otherwise do the whole segment of the animation based on time elapsed from last frame 
+                ratio = frameInfo.elapsed / update.duration;
+            }
+
+            deltaX = update.transform.position.x * ratio;
+            deltaY = update.transform.position.y * ratio;
+
+            update.elapsed += frameInfo.elapsed;
+
+            this.move({
+                x: deltaX,
+                y: deltaY
+            });
+
+
+            if (update.elapsed >= update.duration) {
+                this.updateQueue.splice(0, 1);
+            }
+
             return this;
         },
 
         /**
          * Add an animation to the shape's queue
          * @memberof grease.Shape
+         * @param transform
+         * @param duration
+         * @param [easing]
          * @returns {grease.Shape}
          */
         animate: function (transform, duration, easing) {
-            this.updates.push({
+            this.updateQueue.push({
                 transform: transform,
                 duration: duration,
-                easing: easing
+                easing: easing,
+                elapsed: 0
             });
 
             return this;
@@ -879,10 +915,10 @@
          * @param {number} [transform.scale]
          * @returns {grease.Group}
          */
-        draw: function (context, transform) {
+        draw: function (context, transform, frameInfo) {
             this.each(function () {
                 if (this.renderFlag) {
-                    this.render(context, transform);
+                    this.render(context, transform, frameInfo);
                 }
             });
 

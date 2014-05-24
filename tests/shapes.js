@@ -24,9 +24,9 @@ test('Shape moveTo', function () {
 
 	ok(shape.position().x === 30 && shape.position().y === 20, 'Shape position set correctly on construction');
 
-	shape.moveTo({
-		x: 80,
-		y: 100
+	shape.move({
+		x: 50,
+		y: 80
 	});
 
 	ok(shape.position().x === 80 && shape.position().y === 100, 'Shape moved to expected position');
