@@ -671,7 +671,7 @@
 
             this.rows = opts.rows;
             this.cols = opts.cols;
-            this.cells = this.rows * this.cols;
+            this.cells = opts.cells || this.rows * this.cols;
 
             this.image = new grease.Image({
                 src: opts.src
@@ -691,12 +691,14 @@
          * @returns {grease.Sprite}
          */
         draw: function (context, transform) {
-            var clip = {
-                x: (this.activeCell % this.cols) * this.cellWidth,
-                y: (this.activeCell % this.rows) * this.cellHeight,
-                width: this.cellWidth,
-                height: this.cellHeight
-            };
+            var rowIndex = this.activeCell % this.cols,
+                colIndex = (this.activeCell - rowIndex) % this.rows,
+                clip = {
+                    x: rowIndex * this.cellWidth,
+                    y: colIndex * this.cellHeight,
+                    width: this.cellWidth,
+                    height: this.cellHeight
+                };
 
             if (this.image.renderFlag) {
                 this.image.draw(context, transform, clip);
@@ -711,7 +713,7 @@
          * @returns {grease.Sprite}
          */
         step: function () {
-            if (this.activeCell < this.cells - 1) {
+            if (this.activeCell < this.cells) {
                 this.activeCell++;
             } else {
                 this.activeCell = 0;
