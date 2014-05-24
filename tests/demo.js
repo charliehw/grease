@@ -95,6 +95,10 @@ window.onload = function () {
 		cells: 29 // Skipping the last image
 	});
 
+	sprite.on('click', function (e) {
+		scene.remove(this);
+	});
+
 	scene.add(sprite).on('render', function (info) {
 		if (info.frame % 2 === 0) {
 			sprite.step();

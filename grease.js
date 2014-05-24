@@ -4,8 +4,8 @@
  * 2D animation framework for HTML canvas
  * @file grease.js
  * @author charliehw
- * @version 0.0.0
- * @todo Images, Lines, Gradients, Clipping, Text, Transformation, Sprites
+ * @version 0.0.1
+ * @todo Lines, Gradients, Clipping, Text, Transformation, Sprites
  */
 
 (function (root, factory) {
@@ -72,6 +72,10 @@
             scale: opts.scale || 1,
             rotation: opts.rotation || 0
         };
+
+        // opt.static = false stops the shape or group from being checked for events at all
+        // If it's a group, no shapes within the group be checked either
+        this.registerEvents = !opts.static;
 
         // Container for event handlers
         this.events = {};
@@ -175,14 +179,36 @@
         },
 
         /**
-         * Unless the shape has bounds set against it, this should be implemented by a specific shape
+         * Test a point against the shape or the bounds set on it
          * @memberof grease.Shape
          * @param coords
          * @param transform
          * @returns {boolean}
          */
         testBounds: function (coords, transform) {
-            return this.bounds ? this.bounds.testBounds(coords, transform) : false;
+            // this.registerEvents determines if any checking should take place for this shape at all
+            if (this.registerEvents) {
+                // Calculate the shape's absolute transform, otherwise this would have to be done in every shape's checkCollision
+                transform = this.getAbsoluteTransform(transform);
+
+                // If the shape has a 'bounds' property and it is a valid shape, use that to check for a collision
+                if (this.bounds && this.bounds instanceof grease.Shape) {
+                    return this.bounds.checkCollision(coords, transform);
+                } else {
+                    return this.checkCollision(coords, transform);
+                }
+            } else {
+                return false;
+            }
+        },
+
+        /**
+         * Implemented by subclasses
+         * @memberof grease.Shape
+         * @returns {boolean}
+         */
+        checkCollision: function () {
+            return false;
         },
 
         /**
@@ -381,8 +407,7 @@
          * @param transform
          * @returns {boolean}
          */
-        testBounds: function (coords, transform) {
-            transform = this.getAbsoluteTransform(transform);
+        checkCollision: function (coords, transform) {
             var horizontal = coords.x >= transform.position.x && coords.x <= transform.position.x + this.width * transform.scale,
                 vertical = coords.y >= transform.position.y && coords.y <= transform.position.y + this.height * transform.scale;
 
@@ -439,8 +464,7 @@
          * @param transform
          * @returns {boolean}
          */
-        testBounds: function (coords, transform) {
-            transform = this.getAbsoluteTransform(transform);
+        checkCollision: function (coords, transform) {
             // Check angle is between start and end
             var angle = math.atan2(coords.y - transform.position.y, coords.x - transform.position.x);
             if (angle < 0) {
@@ -496,8 +520,7 @@
          * @param transform
          * @return {boolean}
          */
-        testBounds: function (coords, transform) {
-            transform = this.getAbsoluteTransform(transform);
+        checkCollision: function (coords, transform) {
             return this.checkDistance(coords, transform);
         }
 
@@ -643,12 +666,8 @@
          * @param transform
          * @return {boolean}
          */
-        testBounds: function (coords, transform) {
-            if (this.bounds) {
-                return this.bounds.testBounds(coords, transform);
-            } else {
-                return grease.Rectangle.prototype.testBounds.call(this, coords, transform);
-            }
+        checkCollision: function (coords, transform) {
+            return grease.Rectangle.prototype.checkCollision.call(this, coords, transform);
         }
 
     });
@@ -719,6 +738,17 @@
                 this.activeCell = 0;
             }
             return this;
+        },
+
+        /**
+         * Tests the bounds of the image, either the bounds set, or a rectangle
+         * @memberof grease.Sprite
+         * @param coords
+         * @param transform
+         * @return {boolean}
+         */
+        checkCollision: function (coords, transform) {
+            return this.image.checkCollision(coords, transform);
         }
     });
 
@@ -939,14 +969,12 @@
          * @returns {grease.Group} match.group The group that the matching shapes are in
          * @returns {grease.Shape[]} match.shapes The shapes that match the bounds
          */
-        testBounds: function (coords, transform) {
+        checkCollision: function (coords, transform) {
             var test,
                 match = {
                     group: this,
                     shapes: []
                 };
-
-            transform = this.getAbsoluteTransform(transform);
 
             this.each(function () {
                 test = this.testBounds(coords, transform);
@@ -1305,10 +1333,10 @@
         offset: function () {
             var offset, elem;
 
-            if (this.offset) {
+            if (this.cachedOffset) {
                 // Use the cached offset if it is available
                 // We are assuming the canvas itself will not move so we don't have to calculate this all the time
-                offset = this.offset;
+                offset = this.cachedOffset;
             } else {
                 // Calculate the offset by summing up all offset throughout the document hierarchy
                 elem = this.elem;
@@ -1324,7 +1352,7 @@
                 } while (elem.offsetParent);
 
                 // Then cache it
-                this.offset = offset;
+                this.cachedOffset = offset;
             }
 
             return offset;
