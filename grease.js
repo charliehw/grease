@@ -61,6 +61,11 @@
      * @param {grease.Material} [opts.material]
      */
     grease.Shape = function (opts) {
+        // Prevent the base constructor from being called more than once
+        if (this.constructed) {
+            return this;
+        }
+
         this.renderFlag = true;
         this.material = opts.material || grease.defaultMaterial;
 
@@ -85,6 +90,8 @@
 
         // Updates used for animation
         this.updateQueue = [];
+
+        this.constructed = true;
     };
 
     _.extend(grease.Shape.prototype, {
@@ -304,8 +311,8 @@
                 ratio = frameInfo.elapsed / update.duration;
             }
 
-            deltaX = update.transform.position.x * ratio;
-            deltaY = update.transform.position.y * ratio;
+            deltaX = (update.transform.position.x || 0) * ratio;
+            deltaY = (update.transform.position.y || 0) * ratio;
 
             update.elapsed += frameInfo.elapsed;
 
@@ -313,7 +320,6 @@
                 x: deltaX,
                 y: deltaY
             });
-
 
             if (update.elapsed >= update.duration) {
                 this.updateQueue.splice(0, 1);
@@ -579,6 +585,7 @@
         /**
          * @constructor
          * @memberof grease.Line
+         * @param opts
          */
         constructor: function (opts) {
             this.transform.position.x = opts.points[0].x;
@@ -591,6 +598,8 @@
         /**
          * Add a point or array of points to the line
          * @memberof grease.Line
+         * @param points
+         * @returns {grease.Line}
          */
         add: function (points) {
             if (_.isArray(points)) {
@@ -600,32 +609,39 @@
             } else {
                 this.points.push(points);
             }
+
+            return this;
         },
 
         /**
          * Draw the line to the context
          * @memberof grease.Line
+         * @param context
+         * @param transform
+         * @returns {grease.Line}
          */
         draw: function (context, transform) {
             context.beginPath();
 
             _.each(this.points, function (point, index) {
+                var p = transform.position;
+
                 // The first point should just be moved to
                 if (index === 0) {
-                    context.moveTo(point.x, point.y);
+                    context.moveTo(point.x + p.x, point.y + p.y);
                 } else {
                     // The other points might be curved to depending on the existence of control points
                     if (point.controlPoints) {
                         if (point.controlPoints.length > 1) {
-                            context.bezierCurveTo(point.controlPoints[0].x, point.controlPoints[0].y, point.controlPoints[1].x, point.controlPoints[1].y, point.x, point.y);
+                            context.bezierCurveTo(point.controlPoints[0].x + p.x, point.controlPoints[0].y + p.y, point.controlPoints[1].x + p.x, point.controlPoints[1].y + p.y, point.x + p.x, point.y + p.y);
                         } else {
-                            context.quadraticCurveTo(point.controlPoints[0].x, point.controlPoints[0].y, point.x, point.y);
+                            context.quadraticCurveTo(point.controlPoints[0].x + p.x, point.controlPoints[0].y + p.y, point.x + p.x, point.y + p.y);
                         }
                     } else {
-                        context.lineTo(point.x, point.y);
+                        context.lineTo(point.x + p.x, point.y + p.y);
                     }
                 }
-            }, this);
+            });
 
             context.closePath();
             this.applyMaterial(context, transform);
@@ -696,7 +712,7 @@
         },
 
         /**
-         * Tests the bounds of the image, either the bounds set, or a rectangle
+         * Checks for a collision with a rectangle of the same size
          * @memberof grease.Image
          * @param coords
          * @param transform
@@ -765,9 +781,14 @@
         /**
          * Step the sprite forward to the next cell in the sequence
          * @memberof grease.Sprite
+         * @param {number} [step] Amount to step through the current sequence, default +1
          * @returns {grease.Sprite}
          */
         step: function (step) {
+            if (_.isUndefined(step)) {
+                step = 1;
+            }
+
             if (this.activeCell + step < 0) {
                 this.activeCell = this.cells + 1 + step;
             } else if (this.activeCell + step > this.cells) {
@@ -775,11 +796,12 @@
             } else {
                 this.activeCell += step;
             }
+
             return this;
         },
 
         /**
-         * Tests the bounds of the image, either the bounds set, or a rectangle
+         * Check for a collision with the sprite's image
          * @memberof grease.Sprite
          * @param coords
          * @param transform
@@ -957,7 +979,6 @@
             this.length = this.shapes.length;
 
             return this;
-
         },
 
         /**
@@ -968,6 +989,7 @@
          */
         remove: function (target) {
             var self = this;
+
             this.each(function (index, shape) {
                 if (target === shape) {
                     self.shapes.splice(index, 1);
@@ -977,7 +999,16 @@
             this.length = this.shapes.length;
 
             return self;
+        },
 
+        /**
+         * Empties the group
+         * @memberof grease.Group
+         * @returns {grease.Group}
+         */
+        empty: function () {
+            this.shapes = [];
+            return this;
         },
 
         /**
@@ -987,15 +1018,13 @@
          * @returns {grease.Group}
          */
         each: function (callback) {
-
             _.each(this.shapes, function (shape, index) {
                 if (shape) {
                     callback.call(shape, index, shape);
                 }
-            }, this);
+            });
 
             return this;
-
         },
 
         /**
@@ -1107,6 +1136,10 @@
             return this;
         },
 
+        /**
+         * Update the frame info object
+         * @memberof grease.Scene
+         */
         updateFrameInfo: function () {
             var now = date.now();
             if (!this.frameInfo) {
@@ -1124,8 +1157,15 @@
             }
         },
 
+        /**
+         * Stop the scene and remove it's canvas
+         * @memberof grease.Scene
+         * @returns {grease.Scene}
+         */
         destroy: function () {
+            this.stop();
             this.canvas.destroy();
+            return this;
         }
 
     });
@@ -1256,8 +1296,7 @@
                 path.push(shape);
             }
 
-            return path;
-            
+            return path;      
         }
 
     });
