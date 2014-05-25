@@ -746,11 +746,11 @@
          * @returns {grease.Sprite}
          */
         draw: function (context, transform) {
-            var rowIndex = this.activeCell % this.cols,
-                colIndex = (this.activeCell - rowIndex) % this.rows,
+            var positionInRow = this.activeCell % this.cols,
+                positionInCol = (this.activeCell - positionInRow) / this.cols,
                 clip = {
-                    x: rowIndex * this.cellWidth,
-                    y: colIndex * this.cellHeight,
+                    x: positionInRow * this.cellWidth,
+                    y: positionInCol * this.cellHeight,
                     width: this.cellWidth,
                     height: this.cellHeight
                 };
@@ -767,11 +767,13 @@
          * @memberof grease.Sprite
          * @returns {grease.Sprite}
          */
-        step: function () {
-            if (this.activeCell < this.cells) {
-                this.activeCell++;
+        step: function (step) {
+            if (this.activeCell + step < 0) {
+                this.activeCell = this.cells + 1 + step;
+            } else if (this.activeCell + step > this.cells) {
+                this.activeCell = (this.activeCell + step) - this.cells;
             } else {
-                this.activeCell = 0;
+                this.activeCell += step;
             }
             return this;
         },

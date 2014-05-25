@@ -61,7 +61,7 @@ window.onload = function () {
 			scene.move({
 				x: 1
 			});
-			if (p.x >= 320) {
+			if (p.x >= 180) {
 				moveLeft = false;
 			}
 		} else {
@@ -84,10 +84,10 @@ window.onload = function () {
 
 
 	var sprite = new grease.Sprite({
-		src: 'img/walksequence.png',
-		rows: 5,
+		src: 'img/sheet.png',
+		rows: 4,
 		cols: 6,
-		cells: 29 // Skipping the last image
+		cells: 23
 	});
 
 	sprite.move({x: 100, y: 50}, 1000).on('click', function (e) {
@@ -96,7 +96,7 @@ window.onload = function () {
 
 	scene.add(sprite).on('render', function (info) {
 		if (info.frame % 2 === 0) {
-			sprite.step();
+			sprite.step(-1);
 		}
 	});
 
