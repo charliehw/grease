@@ -1,4 +1,5 @@
-// Test scene
+/* global grease */
+
 function random(a, b) {
 	return Math.floor(Math.random()*(b-a+1)+a);
 }
@@ -12,7 +13,7 @@ var updateInfo = (function () {
 
 window.onload = function () {
 	
-	window.scene = new grease.Scene('#canvas');
+	var scene = new grease.Scene('#canvas');
 
 	var shapes = [],
 		shape,
@@ -20,6 +21,10 @@ window.onload = function () {
 		opts,
 		number = 100;
 
+
+	function removeShape() {
+		scene.remove(this);
+	}
 
 	while (number--) {
 		mat = new grease.Material({fillStyle: 'rgb(' + random(0, 255) + ', ' + random(0, 255) + ', ' + random(0, 255) + ')'});
@@ -38,9 +43,7 @@ window.onload = function () {
 			opts.height = random(20, 100);
 			shape = new grease.Rectangle(opts);
 		}
-		shape.on('click', function (e) {
-			scene.remove(this);
-		});
+		shape.on('click', removeShape);
 		shapes.push(shape);
 	}
 
@@ -90,7 +93,7 @@ window.onload = function () {
 		cells: 23
 	});
 
-	sprite.move({x: 100, y: 50}, 1000).on('click', function (e) {
+	sprite.move({x: 100, y: 50}, 1000).on('click', function () {
 		scene.remove(this);
 	});
 
@@ -99,5 +102,32 @@ window.onload = function () {
 			sprite.step(-1);
 		}
 	});
+
+
+	var text = new grease.Text({
+		text: 'This is text!',
+		x: 100,
+		y: 100
+	});
+
+	scene.add(text);
+
+
+
+
+	var line = new grease.Line({
+		points: [
+			{x: 40, y: 400},
+			{x: 60, y: 140},
+			{x: 20, y: 140},
+		],
+		fill: false,
+		material: new grease.Material({
+			lineWidth: 5,
+			strokeStyle: 'rgb(0,0,0)'
+		})
+	});
+
+	scene.add(line);
 
 };

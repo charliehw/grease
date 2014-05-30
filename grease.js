@@ -33,6 +33,8 @@
 
 }(this, function (root, grease, _) {
 
+    'use strict';
+
     var doc = root.document,
         math = root.Math,
         date = root.Date;
@@ -42,7 +44,7 @@
         LINEAR_GRADIENT_TYPE: 'linear'
     };
 
-    grease.version = '0.0.0';
+    grease.version = '0.0.1';
 
 
     root.requestAnimationFrame = (function () {
@@ -116,9 +118,9 @@
                 context.fillStyle = mat.fillStyle;
                 context.fill();
             }
-            if (mat.lineWidth) {
-                context.lineWidth = mat.lineWidth * transform.scale;
-            }
+
+            context.lineWidth = mat.lineWidth * transform.scale;
+
             if (mat.lineCap) {
                 context.lineCap = mat.lineCap;
             }
@@ -299,20 +301,22 @@
             }
 
             var update = this.updateQueue[0],
-                ratio,
+                elapsed,
                 deltaX,
                 deltaY;
 
             if (update.elapsed + frameInfo.elapsed > update.duration) {
                 // If the frame overlaps the end of the animation, just do the last bit of the animation
-                ratio = (update.duration - update.elapsed) / update.duration;
+                elapsed = update.duration - update.elapsed;
             } else {
                 // Otherwise do the whole segment of the animation based on time elapsed from last frame 
-                ratio = frameInfo.elapsed / update.duration;
+                elapsed = frameInfo.elapsed;
             }
 
-            deltaX = (update.transform.position.x || 0) * ratio;
-            deltaY = (update.transform.position.y || 0) * ratio;
+
+            // Linear blend - needs cleaning up
+            deltaX = grease.easing['linear'](elapsed, update.transform.position.x || 0, update.duration || 1);
+            deltaY = grease.easing['linear'](elapsed, update.transform.position.y || 0, update.duration || 1);
 
             update.elapsed += frameInfo.elapsed;
 
@@ -588,9 +592,6 @@
          * @param opts
          */
         constructor: function (opts) {
-            this.transform.position.x = opts.points[0].x;
-            this.transform.position.y = opts.points[0].y;
-
             this.isOutline = !opts.fill;
             this.points = opts.points || [];
         },
@@ -643,7 +644,6 @@
                 }
             });
 
-            context.closePath();
             this.applyMaterial(context, transform);
             return this;
         }
@@ -835,6 +835,8 @@
          */
         applyMaterial: function (context, transform) {
             var mat = this.material;
+            context.font = this.material.font;
+
             if (mat.fillStyle) {
                 context.fillStyle = mat.fillStyle;
                 context.fillText(this.text, this.transform.position.x, this.transform.position.y);
@@ -848,7 +850,8 @@
             if (mat.strokeStyle) {
                 context.strokeStyle = mat.strokeStyle;
                 context.strokeText(this.text, this.transform.position.x, this.transform.position.y);
-            }        
+            }
+            context.closePath();
         },
 
         /**
@@ -865,6 +868,137 @@
 
     });
 
+
+
+    grease.easing = {
+        linear: function (t, c, d) {
+            return c*(t/d);
+        }/*,
+        easeInQuad: function (t, c, d) {
+            return c*(t/=d)*t;
+        },
+        easeOutQuad: function (t, c, d) {
+            return -c *(t/=d)*(t-2);
+        },
+        easeInOutQuad: function (t, c, d) {
+            if ((t/=d/2) < 1) return c/2*t*t;
+            return -c/2 * ((--t)*(t-2) - 1);
+        },
+        easeInCubic: function (t, c, d) {
+            return c*(t/=d)*t*t;
+        },
+        easeOutCubic: function (t, c, d) {
+            return c*((t=t/d-1)*t*t + 1);
+        },
+        easeInOutCubic: function (t, c, d) {
+            if ((t/=d/2) < 1) return c/2*t*t*t;
+            return c/2*((t-=2)*t*t + 2);
+        },
+        easeInQuart: function (t, c, d) {
+            return c*(t/=d)*t*t*t;
+        },
+        easeOutQuart: function (t, c, d) {
+            return -c * ((t=t/d-1)*t*t*t - 1);
+        },
+        easeInOutQuart: function (t, c, d) {
+            if ((t/=d/2) < 1) return c/2*t*t*t*t;
+            return -c/2 * ((t-=2)*t*t*t - 2);
+        },
+        easeInQuint: function (t, c, d) {
+            return c*(t/=d)*t*t*t*t;
+        },
+        easeOutQuint: function (t, c, d) {
+            return c*((t=t/d-1)*t*t*t*t + 1);
+        },
+        easeInOutQuint: function (t, c, d) {
+            if ((t/=d/2) < 1) return c/2*t*t*t*t*t;
+            return c/2*((t-=2)*t*t*t*t + 2);
+        },
+        easeInSine: function (t, c, d) {
+            return -c * Math.cos(t/d * (Math.PI/2)) + c;
+        },
+        easeOutSine: function (t, c, d) {
+            return c * Math.sin(t/d * (Math.PI/2));
+        },
+        easeInOutSine: function (t, c, d) {
+            return -c/2 * (Math.cos(Math.PI*t/d) - 1);
+        },
+        easeInExpo: function (t, c, d) {
+            return (t==0) ? b : c * Math.pow(2, 10 * (t/d - 1));
+        },
+        easeOutExpo: function (t, c, d) {
+            return (t==d) ? b+c : c * (-Math.pow(2, -10 * t/d) + 1);
+        },
+        easeInOutExpo: function (t, c, d) {
+            if (t==0) return b;
+            if (t==d) return b+c;
+            if ((t/=d/2) < 1) return c/2 * Math.pow(2, 10 * (t - 1));
+            return c/2 * (-Math.pow(2, -10 * --t) + 2);
+        },
+        easeInCirc: function (t, c, d) {
+            return -c * (Math.sqrt(1 - (t/=d)*t) - 1);
+        },
+        easeOutCirc: function (t, c, d) {
+            return c * Math.sqrt(1 - (t=t/d-1)*t);
+        },
+        easeInOutCirc: function (t, c, d) {
+            if ((t/=d/2) < 1) return -c/2 * (Math.sqrt(1 - t*t) - 1);
+            return c/2 * (Math.sqrt(1 - (t-=2)*t) + 1);
+        },
+        easeInElastic: function (t, c, d) {
+            var s=1.70158;var p=0;var a=c;
+            if (t==0) return b;  if ((t/=d)==1) return b+c;  if (!p) p=d*.3;
+            if (a < Math.abs(c)) { a=c; var s=p/4; }
+            else var s = p/(2*Math.PI) * Math.asin (c/a);
+            return -(a*Math.pow(2,10*(t-=1)) * Math.sin( (t*d-s)*(2*Math.PI)/p ));
+        },
+        easeOutElastic: function (t, c, d) {
+            var s=1.70158;var p=0;var a=c;
+            if (t==0) return b;  if ((t/=d)==1) return b+c;  if (!p) p=d*.3;
+            if (a < Math.abs(c)) { a=c; var s=p/4; }
+            else var s = p/(2*Math.PI) * Math.asin (c/a);
+            return a*Math.pow(2,-10*t) * Math.sin( (t*d-s)*(2*Math.PI)/p ) + c;
+        },
+        easeInOutElastic: function (t, c, d) {
+            var s=1.70158;var p=0;var a=c;
+            if (t==0) return b;  if ((t/=d/2)==2) return b+c;  if (!p) p=d*(.3*1.5);
+            if (a < Math.abs(c)) { a=c; var s=p/4; }
+            else var s = p/(2*Math.PI) * Math.asin (c/a);
+            if (t < 1) return -.5*(a*Math.pow(2,10*(t-=1)) * Math.sin( (t*d-s)*(2*Math.PI)/p ));
+            return a*Math.pow(2,-10*(t-=1)) * Math.sin( (t*d-s)*(2*Math.PI)/p )*.5 + c;
+        },
+        easeInBack: function (t, c, d, s) {
+            if (s == undefined) s = 1.70158;
+            return c*(t/=d)*t*((s+1)*t - s);
+        },
+        easeOutBack: function (t, c, d, s) {
+            if (s == undefined) s = 1.70158;
+            return c*((t=t/d-1)*t*((s+1)*t + s) + 1);
+        },
+        easeInOutBack: function (t, c, d, s) {
+            if (s == undefined) s = 1.70158; 
+            if ((t/=d/2) < 1) return c/2*(t*t*(((s*=(1.525))+1)*t - s));
+            return c/2*((t-=2)*t*(((s*=(1.525))+1)*t + s) + 2);
+        },
+        easeInBounce: function (t, c, d) {
+            return c - jQuery.easing.easeOutBounce (d-t, 0, c, d);
+        },
+        easeOutBounce: function (t, c, d) {
+            if ((t/=d) < (1/2.75)) {
+                return c*(7.5625*t*t);
+            } else if (t < (2/2.75)) {
+                return c*(7.5625*(t-=(1.5/2.75))*t + .75);
+            } else if (t < (2.5/2.75)) {
+                return c*(7.5625*(t-=(2.25/2.75))*t + .9375);
+            } else {
+                return c*(7.5625*(t-=(2.625/2.75))*t + .984375);
+            }
+        },
+        easeInOutBounce: function (t, c, d) {
+            if (t < d/2) return jQuery.easing.easeInBounce (t*2, 0, c, d) * .5;
+            return jQuery.easing.easeOutBounce (t*2-d, 0, c, d) * .5 + c*.5;
+        }*/
+    };
 
 
 
@@ -891,8 +1025,9 @@
      */
     grease.defaultMaterial = new grease.Material({
         fillStyle: 'rgb(50, 100, 0)',
-        strokeStyle: 'rgb(0, 0, 0)',
-        lineWidth: 10
+        strokeStyle: 0,
+        lineWidth: 0,
+        font: '20pt Arial'
     });
 
 
@@ -918,7 +1053,6 @@
      * @constructor
      * @param opts
      */
-
     grease.Group = grease.Shape.extend({
 
         /**
@@ -1348,12 +1482,10 @@
          * @memberof grease.Canvas
          */
         getContext: function (type) {
-
             if (!this._context || type) {
                 this._context = this.elem.getContext(type || '2d');
             }
             return this._context;
-
         },
 
         /**
@@ -1371,7 +1503,6 @@
 
             this.getContext().clearRect(coords.x, coords.y, coords.width, coords.height);
             return this;
-
         },
 
         /**

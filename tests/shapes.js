@@ -1,3 +1,5 @@
+/* global grease, module, test, ok */
+
 module('grease.Shape tests');
 
 

@@ -49,6 +49,9 @@ module.exports = function(grunt) {
       },
       grease: {
         src: ['grease.js']
+      },
+      tests: {
+        src: 'tests/*.js'
       }
     },
     qunit: {

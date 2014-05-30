@@ -1,3 +1,5 @@
+/* global grease, module, test, asyncTest, ok, expect, start */
+
 module('grease.Scene tests');
 
 
