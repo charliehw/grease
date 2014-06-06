@@ -67,9 +67,12 @@
      * Basic subclass drawable shape
      * @constructor
      * @param opts
-     * @param {number} opts.x Horizontal position
-     * @param {number} opts.y Vertical position
-     * @param {grease.Material} [opts.material]
+     * @param {number} [opts.x=0] Horizontal position
+     * @param {number} [opts.y=0] Vertical position
+     * @param {number} [opts.scale=1]
+     * @param {number} [opts.rotation=0]
+     * @param {boolean} [opts.static=false]
+     * @param {grease.Material} [opts.material=grease.defaultMaterial]
      */
     grease.Shape = function (opts) {
         // Prevent the base constructor from being called more than once
@@ -422,12 +425,11 @@
     /**
      * Represents a rectangle to be drawn
      * @constructor
+     * @augments grease.Shape
      * @param opts Rectangle options
-     * @param {number} opts.x Horizontal position
-     * @param {number} opts.y Vertical position
-     * @param {number} opts.width Width
-     * @param {number} opts.height Height
-     * @param {grease.Material} [opts.material]
+     * @see grease.Shape options
+     * @param {number} [opts.width=0] Width
+     * @param {number} [opts.height=0] Height
      */
     grease.Rectangle = grease.Shape.extend({
 
@@ -475,14 +477,13 @@
     /**
      * Represents an arc to be drawn
      * @constructor
+     * @augments grease.Shape
      * @param opts Arc options
-     * @param {number} opts.x Horizontal position
-     * @param {number} opts.y Vertical position
+     * @see grease.Shape options
      * @param {number} opts.radius Radius of the arc
      * @param {number} opts.startAngle Angle to start the arc path from
      * @param {number} opts.endAngle Angle to end the arc path
-     * @param {grease.Material} [opts.material]
-     * @param {boolean} [opts.direction] Draw path counter clockwise?
+     * @param {boolean} [opts.direction=false] Draw path counter clockwise?
      */
     grease.Arc = grease.Shape.extend({
 
@@ -549,13 +550,11 @@
 
 
     /**
-     * Represents a circle to be drawn
+     * Represents a circle to be drawn - start angle and end angle are automatically set
      * @constructor
+     * @augments grease.Arc
      * @param opts Circle options
-     * @param {number} opts.x Horizontal position
-     * @param {number} opts.y Vertical position
-     * @param {number} opts.radius Radius of the circle
-     * @param {grease.Material} [opts.material]
+     * @see grease.Arc options
      */
     grease.Circle = grease.Arc.extend({
 
@@ -588,10 +587,11 @@
     /**
      * Forms a line of points. Can include quadratic or bezier curves
      * @constructor
+     * @augments grease.Shape
      * @param opts Line options
+     * @see grease.Shape options
      * @param {object[]} opts.points Array of points, each should contain x, y and any controlPoints needed for curves
-     * @param {grease.Material} [opts.material]
-     * @param {boolean} [opts.fill] Determines whether or not the area the line surrounds should be filled - default is false
+     * @param {boolean} [opts.fill=false] Determines whether or not the area the line surrounds should be filled
      */
     grease.Line = grease.Shape.extend({
 
@@ -665,12 +665,12 @@
     /**
      * Loads an image for use in a scene
      * @constructor
+     * @augments grease.Shape
      * @param opts Image options
+     * @see grease.Shape options
      * @param {string} opts.src Source path to image
-     * @param {number} opts.x Horizontal position of image
-     * @param {number} opts.y Vertical position of image
-     * @param {number} [opts.width] Display width of image
-     * @param {number} [opts.height] Display height of image
+     * @param {number} [opts.width] Display width of image - default is dynamic based on image
+     * @param {number} [opts.height] Display height of image - default is dynamic based on image
      */
     grease.Image = grease.Shape.extend({
 
@@ -737,7 +737,15 @@
     /**
      * Represents a sprite
      * @constructor
-     * @param opts
+     * @augments grease.Shape
+     * @param opts Sprite options
+     * @see grease.Shape options
+     * @param {number} opts.src Source of the image
+     * @param {number} [opts.cols] Number of columns in uniform sprite image
+     * @param {number} [opts.rows] Number of rows in uniform sprite image
+     * @param {number} [opts.cells] Total number of cells in sprite if rows*cols is not appropriate
+     * @param {number} [opts.frames] Manually defined frames if the sprite is not uniform 
+     * @param {number} [opts.sequences] Definition of sequences for animating the sprite
      */
     grease.Sprite = grease.Shape.extend({
 
@@ -818,7 +826,10 @@
     /**
      * Represents text to be drawn to a scene
      * @constructor
-     * @param {string} text
+     * @augments grease.Shape
+     * @param opts Text options
+     * @see grease.Shape options
+     * @param {string} opts.text Text to be printed
      */
     grease.Text = grease.Shape.extend({
 
@@ -1011,7 +1022,7 @@
      * @param opts Material options
      * @param {string} opts.fillStyle
      * @param {string} opts.strokeStyle
-     * @param {number} opts.lineWidth
+     * @param {number} [opts.lineWidth=0]
      * @param {string} opts.lineCap butt|round|square
      * @param {string} opts.fontFamily Font family to use for text, eg. 'Arial'
      * @param {number} opts.fontSize Size of font as a number
@@ -1057,7 +1068,9 @@
     /**
      * Specifies a group of shapes. Shapes within the group will be positioned and scaled relative to the group
      * @constructor
+     * @augments grease.Shape
      * @param opts
+     * @see grease.Shape options
      */
     grease.Group = grease.Shape.extend({
 
@@ -1212,6 +1225,7 @@
     /**
      * Represents a scene, managing the canvas, animation, rendering etc.
      * @constructor
+     * @augments grease.Group
      * @param {string|number} selectorOrWidth Selector to match an existing canvas element or width of new element
      * @param {number} [height]
      */
@@ -1319,6 +1333,7 @@
     /**
      * Manages all the events triggered on the scene
      * @constructor
+     * @param {grease.Scene} scene
      */
     grease.EventManager = function (scene) {
         this.scene = scene;
@@ -1410,7 +1425,7 @@
          * Wrap the event as a custom object so we can stop custom propagation
          * @memberof grease.EventManager
          * @param {event} e
-         * @returns {greasyEvent}
+         * @returns {GreasyEvent}
          */
         wrapEvent: function (e) {
             var offset = this.scene.canvas.offset();
@@ -1427,6 +1442,8 @@
         /**
          * Reformat the matches into an array ordered for bubbling
          * @memberof grease.EventManager
+         * @param shape
+         * @param [path]
          */
         getBubblePath: function (shape, path) {
             path = path || [];
@@ -1490,6 +1507,8 @@
         /**
          * Get the drawing context, either from cache or from the HTML element
          * @memberof grease.Canvas
+         * @param type
+         * @returns {CanvasContext}
          */
         getContext: function (type) {
             if (!this._context || type) {
@@ -1501,6 +1520,7 @@
         /**
          * Clear the canvas
          * @memberof grease.Canvas
+         * @param [coords]
          * @returns {grease.Canvas}
          */
         clear: function (coords) {
@@ -1518,6 +1538,7 @@
         /**
          * Returns the coordinates of the center point in the canvas
          * @memberof grease.Canvas
+         * @returns {object}
          */
         centerPoint: function () {
             return {
@@ -1547,6 +1568,7 @@
         /**
          * Get the offset of the canvas within the document
          * @memberof grease.Canvas
+         * @returns {object}
          */
         offset: function () {
             var offset, elem;
