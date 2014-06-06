@@ -47,11 +47,20 @@
     grease.version = '0.0.1';
 
 
+    /**
+     * Polyfill for requestAnimationFrame
+     */
     root.requestAnimationFrame = (function () {
         return root.requestAnimationFrame || root.webkitRequestAnimationFrame || root.mozRequestAnimationFrame || function( callback ){
             root.setTimeout(callback, 1000 / 60);
         };
     }());
+
+
+    /**
+     * A custom event object used by the library - gets passed to event handlers
+     * @typedef {Object} GreasyEvent
+     */
 
 
     /**
@@ -365,7 +374,7 @@
             }
 
             if (jumpToEnd) {
-                // Comeplete the first update immediately
+                // Complete the first update immediately
                 this.updateQueue[0].duration = 0;
             } else {
                 // Remove the first update from the queue
@@ -423,7 +432,7 @@
     grease.Rectangle = grease.Shape.extend({
 
         /**
-         * @constructor
+         * Actual constructor implementation
          * @memberof grease.Rectangle
          */
         constructor: function (opts) {
@@ -478,7 +487,7 @@
     grease.Arc = grease.Shape.extend({
 
         /**
-         * @constructor
+         * Actual constructor implementation
          * @memberof grease.Arc
          */
         constructor: function (opts) {
@@ -551,7 +560,7 @@
     grease.Circle = grease.Arc.extend({
 
         /**
-         * @constructor
+         * Actual constructor implementation
          * @memberof grease.Circle
          */
         constructor: function () {
@@ -587,9 +596,8 @@
     grease.Line = grease.Shape.extend({
 
         /**
-         * @constructor
+         * Actual constructor implementation
          * @memberof grease.Line
-         * @param opts
          */
         constructor: function (opts) {
             this.isOutline = !opts.fill;
@@ -667,7 +675,7 @@
     grease.Image = grease.Shape.extend({
 
         /**
-         * @constructor
+         * Actual constructor implementation
          * @memberof grease.Image
          */
         constructor: function (opts) {
@@ -729,13 +737,13 @@
     /**
      * Represents a sprite
      * @constructor
+     * @param opts
      */
     grease.Sprite = grease.Shape.extend({
 
         /**
-         * @constructor
-         * @memberof grease.Sprite
-         * @param opts
+         * Actual constructor implementation
+         * @memberof grease.Sprite    
          */
         constructor: function (opts) {
             var self = this;
@@ -750,6 +758,9 @@
                 this.width = self.cellWidth = this.width / self.cols;
                 this.height = self.cellHeight = this.height / self.rows;
             });
+
+            // The sprite uses its image to check for events
+            this.bounds = this.image;
 
             this.activeCell = 0;
         },
@@ -800,16 +811,6 @@
             return this;
         },
 
-        /**
-         * Check for a collision with the sprite's image
-         * @memberof grease.Sprite
-         * @param coords
-         * @param transform
-         * @return {boolean}
-         */
-        checkCollision: function (coords, transform) {
-            return this.image.checkCollision(coords, transform);
-        }
     });
 
 
@@ -822,7 +823,7 @@
     grease.Text = grease.Shape.extend({
 
         /**
-         * @constructor
+         * Actual constructor implementation
          * @memberof grease.Text
          */
         constructor: function (opts) {
@@ -835,7 +836,7 @@
          */
         applyMaterial: function (context, transform) {
             var mat = this.material;
-            context.font = this.material.font;
+            context.font = this.material.fontSize + 'pt ' + this.material.fontFamily;
 
             if (mat.fillStyle) {
                 context.fillStyle = mat.fillStyle;
@@ -869,7 +870,9 @@
     });
 
 
-
+    /**
+     * Collection of easing functions
+     */
     grease.easing = {
         linear: function (t, c, d) {
             return c*(t/d);
@@ -1010,14 +1013,16 @@
      * @param {string} opts.strokeStyle
      * @param {number} opts.lineWidth
      * @param {string} opts.lineCap butt|round|square
-     * @param {string} opts.font Font style to use for text
+     * @param {string} opts.fontFamily Font family to use for text, eg. 'Arial'
+     * @param {number} opts.fontSize Size of font as a number
      */
     grease.Material = function (opts) {
         this.fillStyle = opts.fillStyle;
         this.strokeStyle = opts.strokeStyle;
         this.lineWidth = opts.lineWidth || 0;
         this.lineCap = opts.lineCap;
-        this.font = opts.font;
+        this.fontFamily = opts.fontFamily;
+        this.fontSize = opts.fontSize;
     };
 
     /**
@@ -1027,7 +1032,8 @@
         fillStyle: 'rgb(50, 100, 0)',
         strokeStyle: 0,
         lineWidth: 0,
-        font: '20pt Arial'
+        fontFamily: 'Arial',
+        fontSize: 20
     });
 
 
@@ -1035,10 +1041,10 @@
      * Represents a gradient for use in a material
      * @constructor
      */
-    grease.Gradient = function (type) {
-        if (type === constants.LINEAR_GRADIENT_TYPE) {
+    grease.Gradient = function (opts) {
+        if (opts.type === constants.LINEAR_GRADIENT_TYPE) {
 
-        } else if (type === constants.RADIAL_GRADIENT_TYPE) {
+        } else if (opts.type === constants.RADIAL_GRADIENT_TYPE) {
 
         }
     };
@@ -1142,6 +1148,7 @@
          */
         empty: function () {
             this.shapes = [];
+            this.length = 0;
             return this;
         },
 
@@ -1225,6 +1232,7 @@
         /**
          * Start the animation loop
          * @memberof grease.Scene
+         * @fires start
          * @returns {grease.Scene}
          */
         start: function () {
@@ -1239,6 +1247,7 @@
         /**
          * Pause the animation loop
          * @memberof grease.Scene
+         * @fires stop
          * @returns {grease.Scene}
          */
         stop: function () {
@@ -1250,6 +1259,7 @@
         /**
          * Internal animation loop
          * @memberof grease.Scene
+         * @fires render
          * @returns {grease.Scene}
          */
         loop: function () {
@@ -1375,7 +1385,7 @@
         /**
          * Find all shapes matching the coordinates of the event and trigger that event on matches
          * @memberof grease.EventManager
-         * @param {greasyEvent} e
+         * @param {GreasyEvent} e
          */
         findMatches: function (e) {
             var matchingShapes = this.scene.testBounds({x: e.x, y: e.y}, this.scene.transform),

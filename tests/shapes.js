@@ -33,3 +33,15 @@ test('Shape moveTo', function () {
 
 	ok(shape.position().x === 80 && shape.position().y === 100, 'Shape moved to expected position');
 });
+
+
+test('Event handling', function () {
+	var shape = new grease.Shape({});
+
+	shape.on('click', function () {
+		ok(this === shape, 'Click handler called and context set appropriately in callback');
+	});
+
+	shape.trigger('click');
+
+});
