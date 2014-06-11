@@ -5,7 +5,7 @@
  * @file grease.js
  * @author charliehw
  * @version 0.0.1
- * @todo Lines, Gradients, Clipping, Text, Transformation, Sprites
+ * @todo Gradients, Clipping, Transformation, Sprites
  */
 
 (function (root, factory) {
@@ -39,10 +39,6 @@
         math = root.Math,
         date = root.Date;
 
-    var constants = {
-        RADIAL_GRADIENT_TYPE: 'radial',
-        LINEAR_GRADIENT_TYPE: 'linear'
-    };
 
     grease.version = '0.0.1';
 
@@ -278,10 +274,19 @@
         /**
          * Get the relative position of the shape
          * @memberof grease.Shape
+         * @param {number} [x] Horizontal position to move to
+         * @param {number} [y] Vertical position to move to
          * @returns {object}
          */
-        position: function () {
-            return this.transform.position;
+        position: function (x, y) {
+            if (_.isNumber(x) && _.isNumber(y)) {
+                this.transform.position = {
+                    x: x,
+                    y: y
+                };
+            } else {
+                return this.transform.position;
+            }
         },
 
         /**
@@ -665,23 +670,20 @@
     /**
      * Loads an image for use in a scene
      * @constructor
-     * @augments grease.Shape
+     * @augments grease.Rectangle
      * @param opts Image options
-     * @see grease.Shape options
+     * @see grease.Rectangle options
      * @param {string} opts.src Source path to image
      * @param {number} [opts.width] Display width of image - default is dynamic based on image
      * @param {number} [opts.height] Display height of image - default is dynamic based on image
      */
-    grease.Image = grease.Shape.extend({
+    grease.Image = grease.Rectangle.extend({
 
         /**
          * Actual constructor implementation
          * @memberof grease.Image
          */
         constructor: function (opts) {
-            this.width = opts.width;
-            this.height = opts.height;
-
             this.renderFlag = false;
             this.elem = new root.Image();
             this.elem.src = opts.src;
@@ -717,17 +719,6 @@
                 context.drawImage(this.elem, transform.position.x, transform.position.y, this.width * transform.scale, this.height * transform.scale);                
             }
             return this;
-        },
-
-        /**
-         * Checks for a collision with a rectangle of the same size
-         * @memberof grease.Image
-         * @param coords
-         * @param transform
-         * @return {boolean}
-         */
-        checkCollision: function (coords, transform) {
-            return grease.Rectangle.prototype.checkCollision.call(this, coords, transform);
         }
 
     });
@@ -1051,14 +1042,21 @@
     /**
      * Represents a gradient for use in a material
      * @constructor
+     * @throws {TypeError} Gradient constructor must be provided a valid type
      */
     grease.Gradient = function (opts) {
-        if (opts.type === constants.LINEAR_GRADIENT_TYPE) {
+        if (opts.type === grease.Gradient.LINEAR_GRADIENT) {
 
-        } else if (opts.type === constants.RADIAL_GRADIENT_TYPE) {
+        } else if (opts.type === grease.Gradient.RADIAL_GRADIENT) {
 
+        } else {
+            throw new TypeError('No valid type provided for gradient creation.');
         }
     };
+
+
+    grease.Gradient.RADIAL_GRADIENT = 'radial';
+    grease.Gradient.LINEAR_GRADIENT = 'linear';
 
 
 
