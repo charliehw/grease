@@ -93,7 +93,7 @@ window.onload = function () {
 		cells: 23
 	});
 
-	sprite.move({x: 100, y: 50}, 1000).on('click', function () {
+	sprite.move({x: 100, y: 50}, 1000, 'easeInQuad').on('click', function () {
 		scene.remove(this);
 	});
 
