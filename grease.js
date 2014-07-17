@@ -5,7 +5,7 @@
  * @file grease.js
  * @author charliehw
  * @version 0.0.1
- * @todo Gradients, Clipping, Transformation, Sprites
+ * @todo Gradients, Clipping, Transformation, Sprites, Dirty flags, Frame buffer
  */
 
 (function (root, factory) {
@@ -1638,7 +1638,7 @@
             t -= 2;
             return c/2 * (Math.sqrt(1 - t*t) + 1) + b;
         }
-        
+
     };
 
 
