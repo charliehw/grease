@@ -44,7 +44,7 @@
 
 
     /**
-     * Polyfill for requestAnimationFrame
+     * Shim for requestAnimationFrame
      */
     root.requestAnimationFrame = (function () {
         return root.requestAnimationFrame || root.webkitRequestAnimationFrame || root.mozRequestAnimationFrame || function( callback ){
@@ -240,7 +240,7 @@
         move: function (position, duration, easing) {
             if (typeof position === 'function') {
                 var options = position.call(this);
-                return this.moveTo(options.position, options.duration, options.easing);
+                return this.move(options.position, options.duration, options.easing);
             } else if (duration) {
                 this.animate({
                     position: position
@@ -249,7 +249,7 @@
                 this.transform.position.x += position.x || 0;
                 this.transform.position.y += position.y || 0;
             } else {
-                throw new TypeError('Invalid position provided for moveTo operation.');
+                throw new TypeError('Invalid position provided for move operation.');
             }
             return this;
         },
@@ -262,10 +262,7 @@
          */
         getAbsoluteTransform: function (transform) {
             return {
-                position: {
-                    x: this.transform.position.x + (transform.position.x || 0),
-                    y: this.transform.position.y + (transform.position.y || 0),              
-                },
+                position: grease.utilities.vector(this.transform.position.x + (transform.position.x || 0), this.transform.position.y + (transform.position.y || 0)),
                 scale: this.transform.scale * (transform.scale || 1),
                 rotation: this.transform.scale + (transform.rotation || 0)
             };
@@ -280,10 +277,9 @@
          */
         position: function (x, y) {
             if (_.isNumber(x) && _.isNumber(y)) {
-                this.transform.position = {
-                    x: x,
-                    y: y
-                };
+                this.transform.position = grease.utilities.vector(x, y);
+            } else if (x && _.isNumber(x.x) && _.isNumber(x.y)) {
+                this.position(x.x, x.y);
             } else {
                 return this.transform.position;
             }
@@ -318,29 +314,40 @@
             }
 
             var update = this.updateQueue[0],
+                newPosition = {},
                 elapsed,
-                deltaX,
-                deltaY;
+                easing;
+
+            // If the animation has just started, store the initial transform
+            if (update.elapsed === 0) {
+                update.initial = {
+                    position: grease.utilities.vector(this.transform.position.x, this.transform.position.y)
+                };
+            }
 
             if (update.elapsed + frameInfo.elapsed > update.duration) {
                 // If the frame overlaps the end of the animation, just do the last bit of the animation
-                elapsed = update.duration - update.elapsed;
+                elapsed = update.duration;
             } else {
                 // Otherwise do the whole segment of the animation based on time elapsed from last frame 
-                elapsed = frameInfo.elapsed;
+                elapsed = update.elapsed;
+            }
+
+            if (typeof update.easing === 'function') {
+                easing = update.easing;
+            } else if (grease.easing[update.easing]) {
+                easing = grease.easing[update.easing];
+            } else {
+                easing = easing = grease.easing['linear'];
             }
 
 
-            // Linear blend - needs cleaning up
-            deltaX = grease.easing['linear'](elapsed, update.transform.position.x || 0, update.duration || 1);
-            deltaY = grease.easing['linear'](elapsed, update.transform.position.y || 0, update.duration || 1);
+            newPosition.x = easing(elapsed, update.transform.position.x || 0, update.duration || 1, update.initial.position.x);
+            newPosition.y = easing(elapsed, update.transform.position.y || 0, update.duration || 1, update.initial.position.y);
 
             update.elapsed += frameInfo.elapsed;
 
-            this.move({
-                x: deltaX,
-                y: deltaY
-            });
+            this.position(newPosition);
 
             if (update.elapsed >= update.duration) {
                 this.updateQueue.splice(0, 1);
@@ -870,140 +877,6 @@
         }
 
     });
-
-
-    /**
-     * Collection of easing functions
-     */
-    grease.easing = {
-        linear: function (t, c, d) {
-            return c*(t/d);
-        }/*,
-        easeInQuad: function (t, c, d) {
-            return c*(t/=d)*t;
-        },
-        easeOutQuad: function (t, c, d) {
-            return -c *(t/=d)*(t-2);
-        },
-        easeInOutQuad: function (t, c, d) {
-            if ((t/=d/2) < 1) return c/2*t*t;
-            return -c/2 * ((--t)*(t-2) - 1);
-        },
-        easeInCubic: function (t, c, d) {
-            return c*(t/=d)*t*t;
-        },
-        easeOutCubic: function (t, c, d) {
-            return c*((t=t/d-1)*t*t + 1);
-        },
-        easeInOutCubic: function (t, c, d) {
-            if ((t/=d/2) < 1) return c/2*t*t*t;
-            return c/2*((t-=2)*t*t + 2);
-        },
-        easeInQuart: function (t, c, d) {
-            return c*(t/=d)*t*t*t;
-        },
-        easeOutQuart: function (t, c, d) {
-            return -c * ((t=t/d-1)*t*t*t - 1);
-        },
-        easeInOutQuart: function (t, c, d) {
-            if ((t/=d/2) < 1) return c/2*t*t*t*t;
-            return -c/2 * ((t-=2)*t*t*t - 2);
-        },
-        easeInQuint: function (t, c, d) {
-            return c*(t/=d)*t*t*t*t;
-        },
-        easeOutQuint: function (t, c, d) {
-            return c*((t=t/d-1)*t*t*t*t + 1);
-        },
-        easeInOutQuint: function (t, c, d) {
-            if ((t/=d/2) < 1) return c/2*t*t*t*t*t;
-            return c/2*((t-=2)*t*t*t*t + 2);
-        },
-        easeInSine: function (t, c, d) {
-            return -c * Math.cos(t/d * (Math.PI/2)) + c;
-        },
-        easeOutSine: function (t, c, d) {
-            return c * Math.sin(t/d * (Math.PI/2));
-        },
-        easeInOutSine: function (t, c, d) {
-            return -c/2 * (Math.cos(Math.PI*t/d) - 1);
-        },
-        easeInExpo: function (t, c, d) {
-            return (t==0) ? b : c * Math.pow(2, 10 * (t/d - 1));
-        },
-        easeOutExpo: function (t, c, d) {
-            return (t==d) ? b+c : c * (-Math.pow(2, -10 * t/d) + 1);
-        },
-        easeInOutExpo: function (t, c, d) {
-            if (t==0) return b;
-            if (t==d) return b+c;
-            if ((t/=d/2) < 1) return c/2 * Math.pow(2, 10 * (t - 1));
-            return c/2 * (-Math.pow(2, -10 * --t) + 2);
-        },
-        easeInCirc: function (t, c, d) {
-            return -c * (Math.sqrt(1 - (t/=d)*t) - 1);
-        },
-        easeOutCirc: function (t, c, d) {
-            return c * Math.sqrt(1 - (t=t/d-1)*t);
-        },
-        easeInOutCirc: function (t, c, d) {
-            if ((t/=d/2) < 1) return -c/2 * (Math.sqrt(1 - t*t) - 1);
-            return c/2 * (Math.sqrt(1 - (t-=2)*t) + 1);
-        },
-        easeInElastic: function (t, c, d) {
-            var s=1.70158;var p=0;var a=c;
-            if (t==0) return b;  if ((t/=d)==1) return b+c;  if (!p) p=d*.3;
-            if (a < Math.abs(c)) { a=c; var s=p/4; }
-            else var s = p/(2*Math.PI) * Math.asin (c/a);
-            return -(a*Math.pow(2,10*(t-=1)) * Math.sin( (t*d-s)*(2*Math.PI)/p ));
-        },
-        easeOutElastic: function (t, c, d) {
-            var s=1.70158;var p=0;var a=c;
-            if (t==0) return b;  if ((t/=d)==1) return b+c;  if (!p) p=d*.3;
-            if (a < Math.abs(c)) { a=c; var s=p/4; }
-            else var s = p/(2*Math.PI) * Math.asin (c/a);
-            return a*Math.pow(2,-10*t) * Math.sin( (t*d-s)*(2*Math.PI)/p ) + c;
-        },
-        easeInOutElastic: function (t, c, d) {
-            var s=1.70158;var p=0;var a=c;
-            if (t==0) return b;  if ((t/=d/2)==2) return b+c;  if (!p) p=d*(.3*1.5);
-            if (a < Math.abs(c)) { a=c; var s=p/4; }
-            else var s = p/(2*Math.PI) * Math.asin (c/a);
-            if (t < 1) return -.5*(a*Math.pow(2,10*(t-=1)) * Math.sin( (t*d-s)*(2*Math.PI)/p ));
-            return a*Math.pow(2,-10*(t-=1)) * Math.sin( (t*d-s)*(2*Math.PI)/p )*.5 + c;
-        },
-        easeInBack: function (t, c, d, s) {
-            if (s == undefined) s = 1.70158;
-            return c*(t/=d)*t*((s+1)*t - s);
-        },
-        easeOutBack: function (t, c, d, s) {
-            if (s == undefined) s = 1.70158;
-            return c*((t=t/d-1)*t*((s+1)*t + s) + 1);
-        },
-        easeInOutBack: function (t, c, d, s) {
-            if (s == undefined) s = 1.70158; 
-            if ((t/=d/2) < 1) return c/2*(t*t*(((s*=(1.525))+1)*t - s));
-            return c/2*((t-=2)*t*(((s*=(1.525))+1)*t + s) + 2);
-        },
-        easeInBounce: function (t, c, d) {
-            return c - jQuery.easing.easeOutBounce (d-t, 0, c, d);
-        },
-        easeOutBounce: function (t, c, d) {
-            if ((t/=d) < (1/2.75)) {
-                return c*(7.5625*t*t);
-            } else if (t < (2/2.75)) {
-                return c*(7.5625*(t-=(1.5/2.75))*t + .75);
-            } else if (t < (2.5/2.75)) {
-                return c*(7.5625*(t-=(2.25/2.75))*t + .9375);
-            } else {
-                return c*(7.5625*(t-=(2.625/2.75))*t + .984375);
-            }
-        },
-        easeInOutBounce: function (t, c, d) {
-            if (t < d/2) return jQuery.easing.easeInBounce (t*2, 0, c, d) * .5;
-            return jQuery.easing.easeOutBounce (t*2-d, 0, c, d) * .5 + c*.5;
-        }*/
-    };
 
 
 
@@ -1607,6 +1480,166 @@
         }
 
     });
+
+
+    /**
+     * Collection of utility functions
+     */
+    grease.utilities = {
+
+        /**
+         * Produce a basic vector object
+         * @param {number} x Horizontal position
+         * @param {number} y Vertical position
+         * @returns {object}
+         */
+        vector: function (x, y) {
+            return {
+                x: x,
+                y: y
+            };
+        }
+
+    };
+
+    /**
+     * Collection of easing functions
+     */
+    grease.easing = {
+
+        linear: function (t, c, d, b) {
+            return c*t/d + b;
+        },
+
+        easeInQuad: function (t, c, d, b) {
+            t /= d;
+            return c*t*t + b;
+        },
+
+        easeOutQuad: function (t, c, d, b) {
+            t /= d;
+            return -c * t*(t-2) + b;
+        },
+
+        easeInOutQuad: function (t, c, d, b) {
+            t /= d/2;
+            if (t < 1) {
+                return c/2*t*t + b;
+            }   
+            t--;
+            return -c/2 * (t*(t-2) - 1) + b;
+        },
+
+        easeInCubic: function (t, c, d, b) {
+            t /= d;
+            return c*t*t*t + b;
+        },
+
+        easeOutCubic: function (t, c, d, b) {
+            t /= d;
+            t--;
+            return c*(t*t*t + 1) + b;
+        },
+
+        easeInOutCubic: function (t, c, d, b) {
+            t /= d/2;
+            if (t < 1) {
+                return c/2*t*t*t + b;
+            }
+            t -= 2;
+            return c/2*(t*t*t + 2) + b;
+        },
+
+        easeInQuart: function (t, c, d, b) {
+            t /= d;
+            return c*t*t*t*t + b;
+        },
+
+        easeOutQuart: function (t, c, d, b) {
+            t /= d;
+            t--;
+            return -c * (t*t*t*t - 1) + b;
+        },
+
+        easeInOutQuart: function (t, c, d, b) {
+            t /= d/2;
+            if (t < 1) {
+                return c/2*t*t*t*t + b;
+            }
+            t -= 2;
+            return -c/2 * (t*t*t*t - 2) + b;
+        },
+
+        easeInQuint: function (t, c, d, b) {
+            t /= d;
+            return c*t*t*t*t*t + b;
+        },
+
+        easeOutQuint: function (t, c, d, b) {
+            t /= d;
+            t--;
+            return c*(t*t*t*t*t + 1) + b;
+        },
+
+        easeInOutQuint: function (t, c, d, b) {
+            t /= d/2;
+            if (t < 1) {
+                return c/2*t*t*t*t*t + b;
+            }
+            t -= 2;
+            return c/2*(t*t*t*t*t + 2) + b;
+        },
+
+        easeInSine: function (t, c, d, b) {
+            return -c * Math.cos(t/d * (Math.PI/2)) + c + b;
+        },
+
+        easeOutSine: function (t, c, d, b) {
+            return c * Math.sin(t/d * (Math.PI/2)) + b;
+        },
+
+        easeInOutSine: function (t, c, d, b) {
+            return -c/2 * (Math.cos(Math.PI*t/d) - 1) + b;
+        },
+
+        easeInExpo: function (t, c, d, b) {
+            return c * Math.pow( 2, 10 * (t/d - 1) ) + b;
+        },
+
+        easeOutExpo: function (t, c, d, b) {
+            return c * ( -Math.pow( 2, -10 * t/d ) + 1 ) + b;
+        },
+
+        easeInOutExpo: function (t, c, d, b) {
+            t /= d/2;
+            if (t < 1) {
+                return c/2 * Math.pow( 2, 10 * (t - 1) ) + b;
+            }
+            t--;
+            return c/2 * ( -Math.pow( 2, -10 * t) + 2 ) + b;
+        },
+
+        easeInCirc: function (t, c, d, b) {
+            t /= d;
+            return -c * (Math.sqrt(1 - t*t) - 1) + b;
+        },
+
+        easeOutCirc: function (t, c, d, b) {
+            t /= d;
+            t--;
+            return c * Math.sqrt(1 - t*t) + b;
+        },
+
+        easeInOutCirc: function (t, c, d, b) {
+            t /= d/2;
+            if (t < 1) {
+                return -c/2 * (Math.sqrt(1 - t*t) - 1) + b;
+            }
+            t -= 2;
+            return c/2 * (Math.sqrt(1 - t*t) + 1) + b;
+        }
+        
+    };
 
 
     return grease;

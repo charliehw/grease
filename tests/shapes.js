@@ -18,7 +18,7 @@ test('Shape extension', function () {
 });
 
 
-test('Shape moveTo', function () {
+test('Shape position', function () {
 	var shape = new grease.Shape({
 		x: 30,
 		y: 20
@@ -26,12 +26,9 @@ test('Shape moveTo', function () {
 
 	ok(shape.position().x === 30 && shape.position().y === 20, 'Shape position set correctly on construction');
 
-	shape.move({
-		x: 50,
-		y: 80
-	});
+	shape.position(50, 80);
 
-	ok(shape.position().x === 80 && shape.position().y === 100, 'Shape moved to expected position');
+	ok(shape.position().x === 50 && shape.position().y === 80, 'Shape moved to expected position');
 });
 
 
