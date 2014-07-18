@@ -955,7 +955,7 @@
     grease.Group = grease.Shape.extend({
 
         /**
-         * @constructor
+         * Actual constructor implementation
          * @memberof grease.Group
          */
         constructor: function () {
@@ -1113,7 +1113,7 @@
     grease.Scene = grease.Group.extend({
 
         /**
-         * @constructor
+         * Actual constructor implementation
          * @memberof grease.Scene
          */
         constructor: function (selectorOrWidth, height) {
