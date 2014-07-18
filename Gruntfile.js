@@ -66,6 +66,14 @@ module.exports = function(grunt) {
         files: '<%= jshint.grease.src %>',
         tasks: ['jshint:grease', 'qunit']
       }
+    },
+    jsdoc: {
+      dist: {
+        src: ['grease.js'],
+        options: {
+          destination: 'doc'
+        }
+      }
     }
   });
 
@@ -75,8 +83,9 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-qunit');
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-contrib-watch');
+  grunt.loadNpmTasks('grunt-jsdoc');
 
   // Default task.
-  grunt.registerTask('default', ['jshint', 'qunit', 'uglify']);
+  grunt.registerTask('default', ['jshint', 'qunit', 'uglify', 'jsdoc']);
 
 };
