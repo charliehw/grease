@@ -87,5 +87,7 @@ module.exports = function(grunt) {
 
   // Default task.
   grunt.registerTask('default', ['jshint', 'qunit', 'uglify', 'jsdoc']);
+  grunt.registerTask('test', ['jshint', 'qunit']);
+  grunt.registerTask('docs', ['jsdoc']);
 
 };

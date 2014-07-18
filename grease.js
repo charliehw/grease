@@ -3,8 +3,10 @@
 /**
  * 2D animation framework for HTML canvas
  * @file grease.js
+ * @requires underscore.js
  * @author charliehw
  * @version 0.0.1
+ * @license MIT
  * @todo Gradients, Clipping, Transformation, Sprites, Dirty flags, Frame buffer
  * @todo Optimise event checking by just working out what the mouse is interacting with each frame, rather than checking on every mouse event (thanks Toby)
  */
@@ -28,6 +30,9 @@
     // Finally, as a browser global
     } else {
 
+        /**
+         * @namespace grease
+         */
         root.grease = factory(root, {}, root._);
 
     }
@@ -67,6 +72,8 @@
     /**
      * A basic x, y vector
      * @typedef {object} vector
+     * @property {number} x Horizontal component
+     * @property {number} y Vertical component
      */
 
 
@@ -91,23 +98,22 @@
         this.material = opts.material || grease.defaultMaterial;
 
         this.transform = {
-            position: {
-                x: opts.x || 0,
-                y: opts.y || 0
-            },
-            scale: opts.scale || 1,
+            position: grease.utilities.vector(opts.x || 0, opts.y || 0),
+            scale: typeof opts.scale === 'undefined' ? 1 : opts.scale,
             rotation: opts.rotation || 0
         };
 
         // opt.static = false stops the shape or group from being checked for events at all
-        // If it's a group, no shapes within the group be checked either
+        // If it's a group, no shapes within the group will be checked either
         this.registerEvents = !opts.static;
 
         // Container for event handlers
-        this.events = {};
+        this.handlers = {};
 
         // States used by the event manager for mouseover mouseout
-        this.states = [];
+        this.states = {
+            mousedover: false
+        };
 
         // Updates used for animation
         this.updateQueue = [];
@@ -158,10 +164,10 @@
          * @returns {grease.Shape}
          */
         on: function (event, handler) {
-            if (this.events[event]) {
-                this.events[event].push(handler);
+            if (this.handlers[event]) {
+                this.handlers[event].push(handler);
             } else {
-                this.events[event] = [handler];
+                this.handlers[event] = [handler];
             }
             return this;
         },
@@ -175,17 +181,17 @@
          */
         off: function (event, handler) {
             if (event) {
-                if (this.events[event]) {
+                if (this.handlers[event]) {
                     if (handler) {
                         // If handler is included, remove only that handler
-                        this.events[event] = _.without(this.events[event], handler);
+                        this.handlers[event] = _.without(this.handlers[event], handler);
                     } else {
                         // Otherwise remove all handlers for the specified event
-                        this.events[event] = null;
+                        this.handlers[event] = null;
                     }
                 }
             } else {
-                this.events = {};
+                this.handlers = {};
             }
             
             return this;
@@ -200,7 +206,7 @@
          * @returns {grease.Shape}
          */
         trigger: function (type, e, data) {
-            _.each(this.events[type], function (handler) {
+            _.each(this.handlers[type], function (handler) {
                 handler.call(this, e, data);
             }, this);
             return this;
@@ -1226,8 +1232,10 @@
      * List of events being handled by the event manager
      * @memberof grease.EventManager
      * @static
+     * @enum
      */
     grease.EventManager.events = {
+
         MOUSE: [
             'click',
             'mousedown',
@@ -1235,11 +1243,19 @@
             'mousemove',
             'dblclick'
         ],
+
+        TOUCH: [
+            'touchstart',
+            'touchmove',
+            'touchend'
+        ],
+
         KEY: [
             'keyup',
             'keydown',
             'keypress'
         ]
+        
     };
 
     _.extend(grease.EventManager.prototype, {
@@ -1258,7 +1274,7 @@
             var self = this;
 
             // Set up canvas event handlers and delegation
-            _.each(grease.EventManager.events.MOUSE, function (event) {
+            _.each(grease.EventManager.events.MOUSE.concat(grease.EventManager.events.TOUCH), function (event) {
                 self.scene.canvas.elem.addEventListener(event, function (e) {
                     e.preventDefault();
                     if (self.captureEvents) {
@@ -1284,7 +1300,7 @@
          * @param {greasyEvent} e
          */
         findMatches: function (e) {
-            var matchingShapes = this.scene.testBounds({x: e.x, y: e.y}, this.scene.transform),
+            var matchingShapes = this.scene.testBounds(e, this.scene.transform),
                 bubblePath = this.getBubblePath(matchingShapes).reverse(),
                 shape;
 
@@ -1309,11 +1325,15 @@
          * @returns {greasyEvent}
          */
         wrapEvent: function (e) {
-            var offset = this.scene.canvas.offset();
+            var touch = e;
+            if (e.changedTouches) {
+                touch = e.changedTouches[0];
+            }
+
             return {
                 originalEvent: e,
-                x: e.pageX - offset.left,
-                y: e.pageY - offset.top,
+                x: touch.clientX,
+                y: touch.clientY,
                 type: e.type,
                 propagationStopped: false,
                 stopPropagation: function () {this.propagationStopped = true;}
@@ -1514,6 +1534,7 @@
 
     /**
      * Collection of utility functions
+     * @namespace grease.utilities
      */
     grease.utilities = {
 
@@ -1545,23 +1566,36 @@
     /**
      * Collection of easing functions
      * t: current time, b: beginning value, c: change in value, d: duration
+     * @namespace grease.easing
      */
     grease.easing = {
 
+        /**
+         * Linear ease
+         */
         linear: function (t, b, c, d) {
             return c*t/d + b;
         },
 
+        /**
+         * easeInQuad
+         */
         easeInQuad: function (t, b, c, d) {
             t /= d;
             return c*t*t + b;
         },
 
+        /**
+         * easeOutQuad
+         */
         easeOutQuad: function (t, b, c, d) {
             t /= d;
             return -c * t*(t-2) + b;
         },
 
+        /**
+         * easeInOutQuad
+         */
         easeInOutQuad: function (t, b, c, d) {
             t /= d/2;
             if (t < 1) {
@@ -1571,17 +1605,26 @@
             return -c/2 * (t*(t-2) - 1) + b;
         },
 
+        /**
+         * easeInCubic
+         */
         easeInCubic: function (t, b, c, d) {
             t /= d;
             return c*t*t*t + b;
         },
 
+        /**
+         * easeOutCubic
+         */
         easeOutCubic: function (t, b, c, d) {
             t /= d;
             t--;
             return c*(t*t*t + 1) + b;
         },
 
+        /**
+         * easeInOutCubic
+         */
         easeInOutCubic: function (t, b, c, d) {
             t /= d/2;
             if (t < 1) {
@@ -1591,17 +1634,26 @@
             return c/2*(t*t*t + 2) + b;
         },
 
+        /**
+         * easeInQuart
+         */
         easeInQuart: function (t, b, c, d) {
             t /= d;
             return c*t*t*t*t + b;
         },
 
+        /**
+         * easeOutQuart
+         */
         easeOutQuart: function (t, b, c, d) {
             t /= d;
             t--;
             return -c * (t*t*t*t - 1) + b;
         },
 
+        /**
+         * easeInOutQuart
+         */
         easeInOutQuart: function (t, b, c, d) {
             t /= d/2;
             if (t < 1) {
@@ -1611,17 +1663,26 @@
             return -c/2 * (t*t*t*t - 2) + b;
         },
 
+        /**
+         * easeInQuint
+         */
         easeInQuint: function (t, b, c, d) {
             t /= d;
             return c*t*t*t*t*t + b;
         },
 
+        /**
+         * easeOutQuint
+         */
         easeOutQuint: function (t, b, c, d) {
             t /= d;
             t--;
             return c*(t*t*t*t*t + 1) + b;
         },
 
+        /**
+         * easeInOutQuint
+         */
         easeInOutQuint: function (t, b, c, d) {
             t /= d/2;
             if (t < 1) {
@@ -1631,26 +1692,44 @@
             return c/2*(t*t*t*t*t + 2) + b;
         },
 
+        /**
+         * easeInSine
+         */
         easeInSine: function (t, b, c, d) {
             return -c * Math.cos(t/d * (Math.PI/2)) + c + b;
         },
 
+        /**
+         * easeOutSine
+         */
         easeOutSine: function (t, b, c, d) {
             return c * Math.sin(t/d * (Math.PI/2)) + b;
         },
 
+        /**
+         * easeInOutSine
+         */
         easeInOutSine: function (t, b, c, d) {
             return -c/2 * (Math.cos(Math.PI*t/d) - 1) + b;
         },
 
+        /**
+         * easeInExpo
+         */
         easeInExpo: function (t, b, c, d) {
             return c * Math.pow( 2, 10 * (t/d - 1) ) + b;
         },
 
+        /**
+         * easeOutExpo
+         */
         easeOutExpo: function (t, b, c, d) {
             return c * ( -Math.pow( 2, -10 * t/d ) + 1 ) + b;
         },
 
+        /**
+         * easeInOutExpo
+         */
         easeInOutExpo: function (t, b, c, d) {
             t /= d/2;
             if (t < 1) {
@@ -1660,17 +1739,26 @@
             return c/2 * ( -Math.pow( 2, -10 * t) + 2 ) + b;
         },
 
+        /**
+         * easeInCirc
+         */
         easeInCirc: function (t, b, c, d) {
             t /= d;
             return -c * (Math.sqrt(1 - t*t) - 1) + b;
         },
 
+        /**
+         * easeOutCirc
+         */
         easeOutCirc: function (t, b, c, d) {
             t /= d;
             t--;
             return c * Math.sqrt(1 - t*t) + b;
         },
 
+        /**
+         * easeInOutCirc
+         */
         easeInOutCirc: function (t, b, c, d) {
             t /= d/2;
             if (t < 1) {

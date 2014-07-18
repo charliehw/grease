@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Class: Material</title>
+    <title>JSDoc: Namespace: utilities</title>
     
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
     
-    <h1 class="page-title">Class: Material</h1>
+    <h1 class="page-title">Namespace: utilities</h1>
     
     
 
@@ -29,7 +29,7 @@
     <h2>
         <span class="ancestors"><a href="grease.html">grease</a>.</span>
     
-    Material
+    utilities
     </h2>
     
 </header>  
@@ -40,8 +40,67 @@
     
     
         
+            <div class="description">Collection of utility functions</div>
+        
+        
+        
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="grease.js.html">grease.js</a>, <a href="grease.js.html#line1535">line 1535</a>
+    </li></ul></dd>
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+        
+        
+    
+    </div>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+        <h3 class="subsection-title">Methods</h3>
+        
+        <dl>
+            
 <dt>
-    <h4 class="name" id="Material"><span class="type-signature"></span>new Material<span class="signature">(opts)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="addVectors"><span class="type-signature">&lt;static> </span>addVectors<span class="signature">(a, b)</span><span class="type-signature"> &rarr; {<a href="global.html#vector">vector</a>}</span></h4>
     
     
 </dt>
@@ -49,7 +108,7 @@
     
     
     <div class="description">
-        Represents a material, including information on fill and stroke styles
+        Add two vectors together to create a new vector
     </div>
     
 
@@ -83,10 +142,15 @@
 	
         <tr>
             
-                <td class="name"><code>opts</code></td>
+                <td class="name"><code>a</code></td>
             
             
             <td class="type">
+            
+                
+<span class="param-type"><a href="global.html#vector">vector</a></span>
+
+
             
             </td>
             
@@ -94,9 +158,125 @@
             
             
             
-            <td class="description last">Material options
-                <h6>Properties</h6>
+            <td class="description last"></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>b</code></td>
+            
+            
+            <td class="type">
+            
                 
+<span class="param-type"><a href="global.html#vector">vector</a></span>
+
+
+            
+            </td>
+            
+            
+            
+            
+            
+            <td class="description last"></td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="grease.js.html">grease.js</a>, <a href="grease.js.html#line1560">line 1560</a>
+    </li></ul></dd>
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    <h5>Returns:</h5>
+    
+            
+
+
+<dl>
+	<dt>
+		Type
+	</dt>
+	<dd>
+		
+<span class="param-type"><a href="global.html#vector">vector</a></span>
+
+
+	</dd>
+</dl>
+
+        
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <h4 class="name" id="vector"><span class="type-signature">&lt;static> </span>vector<span class="signature">(<span class="optional">x</span>, <span class="optional">y</span>)</span><span class="type-signature"> &rarr; {object}</span></h4>
+    
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        Produce a basic vector object
+    </div>
+    
+
+    
+    
+    
+    
+    
+        <h5>Parameters:</h5>
+        
 
 <table class="params">
     <thead>
@@ -124,77 +304,7 @@
 	
         <tr>
             
-                <td class="name"><code>fillStyle</code></td>
-            
-            
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-            
-            </td>
-            
-            
-                <td class="attributes">
-                
-                    
-                
-                    
-                
-                </td>
-            
-            
-            
-                <td class="default">
-                
-                </td>
-            
-            
-            <td class="description last"></td>
-        </tr>
-	
-	
-	
-        <tr>
-            
-                <td class="name"><code>strokeStyle</code></td>
-            
-            
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-            
-            </td>
-            
-            
-                <td class="attributes">
-                
-                    
-                
-                    
-                
-                </td>
-            
-            
-            
-                <td class="default">
-                
-                </td>
-            
-            
-            <td class="description last"></td>
-        </tr>
-	
-	
-	
-        <tr>
-            
-                <td class="name"><code>lineWidth</code></td>
+                <td class="name"><code>x</code></td>
             
             
             <td class="type">
@@ -226,84 +336,14 @@
                 </td>
             
             
-            <td class="description last"></td>
+            <td class="description last">Horizontal position</td>
         </tr>
 	
 	
 	
         <tr>
             
-                <td class="name"><code>lineCap</code></td>
-            
-            
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-            
-            </td>
-            
-            
-                <td class="attributes">
-                
-                    
-                
-                    
-                
-                </td>
-            
-            
-            
-                <td class="default">
-                
-                </td>
-            
-            
-            <td class="description last">butt|round|square</td>
-        </tr>
-	
-	
-	
-        <tr>
-            
-                <td class="name"><code>fontFamily</code></td>
-            
-            
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-            
-            </td>
-            
-            
-                <td class="attributes">
-                
-                    
-                
-                    
-                
-                </td>
-            
-            
-            
-                <td class="default">
-                
-                </td>
-            
-            
-            <td class="description last">Font family to use for text, eg. 'Arial'</td>
-        </tr>
-	
-	
-	
-        <tr>
-            
-                <td class="name"><code>fontSize</code></td>
+                <td class="name"><code>y</code></td>
             
             
             <td class="type">
@@ -318,6 +358,8 @@
             
                 <td class="attributes">
                 
+                    &lt;optional><br>
+                
                     
                 
                     
@@ -328,16 +370,12 @@
             
                 <td class="default">
                 
+                    0
+                
                 </td>
             
             
-            <td class="description last">Size of font as a number</td>
-        </tr>
-	
-	
-	</tbody>
-</table>
-            </td>
+            <td class="description last">Vertical position</td>
         </tr>
 	
 	
@@ -368,7 +406,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="grease.js.html">grease.js</a>, <a href="grease.js.html#line907">line 907</a>
+        <a href="grease.js.html">grease.js</a>, <a href="grease.js.html#line1547">line 1547</a>
     </li></ul></dd>
     
     
@@ -389,25 +427,29 @@
     
     
     
+    <h5>Returns:</h5>
+    
+            
+
+
+<dl>
+	<dt>
+		Type
+	</dt>
+	<dd>
+		
+<span class="param-type">object</span>
+
+
+	</dd>
+</dl>
+
+        
     
     
 </dd>
 
-    
-    </div>
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+        </dl>
     
     
     
