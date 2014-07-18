@@ -6,6 +6,7 @@
  * @author charliehw
  * @version 0.0.1
  * @todo Gradients, Clipping, Transformation, Sprites, Dirty flags, Frame buffer
+ * @todo Optimise event checking by just working out what the mouse is interacting with each frame, rather than checking on every mouse event (thanks Toby)
  */
 
 (function (root, factory) {
@@ -47,7 +48,7 @@
      * Shim for requestAnimationFrame
      */
     root.requestAnimationFrame = (function () {
-        return root.requestAnimationFrame || root.webkitRequestAnimationFrame || root.mozRequestAnimationFrame || function( callback ){
+        return root.requestAnimationFrame || root.webkitRequestAnimationFrame || root.mozRequestAnimationFrame || function (callback) {
             root.setTimeout(callback, 1000 / 60);
         };
     }());
@@ -55,7 +56,17 @@
 
     /**
      * A custom event object used by the library - gets passed to event handlers
-     * @typedef {Object} GreasyEvent
+     * @typedef {object} greasyEvent
+     */
+
+    /**
+     * Information about the current frame
+     * @typedef {object} frameInfo
+     */
+
+    /**
+     * A basic x, y vector
+     * @typedef {object} vector
      */
 
 
@@ -184,7 +195,7 @@
          * Calls all handlers for a specific event
          * @memberof grease.Shape
          * @param {string} type - Event type being triggered
-         * @param {event} e - Removes a specific handler for a specific event
+         * @param {event} e
          * @param [data]
          * @returns {grease.Shape}
          */
@@ -229,32 +240,6 @@
         },
 
         /**
-         * Move the shape's position. Animate if duration supplied
-         * @memberof grease.Shape
-         * @param position Position to move to or line to follow or a function that returns the required options
-         * @param {number} [duration] Duration of animated movement
-         * @param {function} [easing]
-         * @returns {grease.Shape}
-         * @throws {TypeError} Position provided is not valid
-         */
-        move: function (position, duration, easing) {
-            if (typeof position === 'function') {
-                var options = position.call(this);
-                return this.move(options.position, options.duration, options.easing);
-            } else if (duration) {
-                this.animate({
-                    position: position
-                }, duration, easing);
-            } else if (_.isNumber(position.x) || _.isNumber(position.y)) {
-                this.transform.position.x += position.x || 0;
-                this.transform.position.y += position.y || 0;
-            } else {
-                throw new TypeError('Invalid position provided for move operation.');
-            }
-            return this;
-        },
-
-        /**
          * Parent transforms are taken into account to render a shape. This function compunds the parent transform with the shape's transform
          * @memberof grease.Shape
          * @param transform
@@ -269,17 +254,43 @@
         },
 
         /**
-         * Get the relative position of the shape
+         * Move the shape relatively. Animate if duration supplied
          * @memberof grease.Shape
-         * @param {number} [x] Horizontal position to move to
-         * @param {number} [y] Vertical position to move to
+         * @param position Vector to move by or line to follow or a function that returns the required options
+         * @param {number} [duration] Duration of animated movement
+         * @param {function} [easing]
+         * @returns {grease.Shape}
+         * @throws {TypeError} Position provided is not valid
+         */
+        move: function (position, duration, easing) {
+            if (typeof position === 'function') {
+                var options = position.call(this);
+                return this.move(options.position, options.duration, options.easing);
+            } else if (duration) {
+                this.animate({
+                    position: grease.utilities.addVectors(this.position(), position)
+                }, duration, easing);
+            } else if (_.isNumber(position.x) || _.isNumber(position.y)) {
+                position.x = position.x || 0;
+                position.y = position.y || 0;
+                this.position(grease.utilities.addVectors(this.transform.position, position));
+            } else {
+                throw new TypeError('Invalid position provided for move operation.');
+            }
+            return this;
+        },
+
+        /**
+         * Get or set the relative position of the shape
+         * @memberof grease.Shape
+         * @param {number} [position]
+         * @param {number} [position.x] Horizontal position to move to or vector
+         * @param {number} [position.y] Vertical position to move to
          * @returns {object}
          */
-        position: function (x, y) {
-            if (_.isNumber(x) && _.isNumber(y)) {
-                this.transform.position = grease.utilities.vector(x, y);
-            } else if (x && _.isNumber(x.x) && _.isNumber(x.y)) {
-                this.position(x.x, x.y);
+        position: function (position) {
+            if (position && _.isNumber(position.x) && _.isNumber(position.y)) {
+                this.transform.position = position;
             } else {
                 return this.transform.position;
             }
@@ -290,7 +301,7 @@
          * @memberof grease.Shape
          * @param context
          * @param transform
-         * @param frameInfo
+         * @param {frameInfo} frameInfo
          * @returns {grease.Shape}
          */
         render: function (context, transform, frameInfo) {
@@ -305,7 +316,7 @@
         /**
          * Update the shape based on any queued animations
          * @memberof grease.Shape
-         * @param frameInfo Includes information on the current frame
+         * @param {frameInfo} frameInfo Includes information on the current frame
          * @returns {grease.Shape}
          */
         update: function (frameInfo) {
@@ -314,9 +325,9 @@
             }
 
             var update = this.updateQueue[0],
-                newPosition = {},
-                elapsed,
-                easing;
+                newPosition = grease.utilities.vector(),
+                easing = update.easing,
+                elapsed;
 
             // If the animation has just started, store the initial transform
             if (update.elapsed === 0) {
@@ -333,17 +344,13 @@
                 elapsed = update.elapsed;
             }
 
-            if (typeof update.easing === 'function') {
-                easing = update.easing;
-            } else if (grease.easing[update.easing]) {
-                easing = grease.easing[update.easing];
-            } else {
-                easing = easing = grease.easing['linear'];
+            if (!easing || typeof easing !== 'function') {
+                easing = grease.easing[update.easing] || grease.easing['linear'];
             }
 
 
-            newPosition.x = easing(elapsed, update.transform.position.x || 0, update.duration || 1, update.initial.position.x);
-            newPosition.y = easing(elapsed, update.transform.position.y || 0, update.duration || 1, update.initial.position.y);
+            newPosition.x = easing(elapsed, update.initial.position.x, update.transform.position.x || 0, update.duration || 1);
+            newPosition.y = easing(elapsed, update.initial.position.y, update.transform.position.y || 0, update.duration || 1);
 
             update.elapsed += frameInfo.elapsed;
 
@@ -915,6 +922,8 @@
     /**
      * Represents a gradient for use in a material
      * @constructor
+     * @param opts - Gradient options
+     * @param opts.type - grease.Gradient.RADIAL_GRADIENT|grease.Gradient.LINEAR_GRADIENT
      * @throws {TypeError} Gradient constructor must be provided a valid type
      */
     grease.Gradient = function (opts) {
@@ -961,6 +970,7 @@
          * @param transform
          * @param [transform.position] Position determined by the parent group
          * @param {number} [transform.scale]
+         * @param {frameInfo} frameInfo
          * @returns {grease.Group}
          */
         draw: function (context, transform, frameInfo) {
@@ -1271,7 +1281,7 @@
         /**
          * Find all shapes matching the coordinates of the event and trigger that event on matches
          * @memberof grease.EventManager
-         * @param {GreasyEvent} e
+         * @param {greasyEvent} e
          */
         findMatches: function (e) {
             var matchingShapes = this.scene.testBounds({x: e.x, y: e.y}, this.scene.transform),
@@ -1296,7 +1306,7 @@
          * Wrap the event as a custom object so we can stop custom propagation
          * @memberof grease.EventManager
          * @param {event} e
-         * @returns {GreasyEvent}
+         * @returns {greasyEvent}
          */
         wrapEvent: function (e) {
             var offset = this.scene.canvas.offset();
@@ -1477,6 +1487,26 @@
         destroy: function () {
             this.elem.parentElement.removeChild(this.elem);
             return this;
+        },
+
+        /**
+         * Hide the canvas
+         * @memberof grease.Canvas
+         * @returns {grease.Canvas}
+         */
+        hide: function () {
+            this.elem.style.display = 'none';
+            return this;
+        },
+
+        /**
+         * Show the canvas
+         * @memberof grease.Canvas
+         * @returns {grease.Canvas}
+         */
+        show: function () {
+            this.elem.style.display = 'block';
+            return this;
         }
 
     });
@@ -1489,39 +1519,50 @@
 
         /**
          * Produce a basic vector object
-         * @param {number} x Horizontal position
-         * @param {number} y Vertical position
+         * @param {number} [x=0] Horizontal position
+         * @param {number} [y=0] Vertical position
          * @returns {object}
          */
         vector: function (x, y) {
             return {
-                x: x,
-                y: y
+                x: x || 0,
+                y: y || 0
             };
+        },
+
+        /**
+         * Add two vectors together to create a new vector
+         * @param {vector} a
+         * @param {vector} b
+         * @returns {vector}
+         */
+        addVectors: function (a, b) {
+            return grease.utilities.vector(a.x + b.x, a.y + b.y);
         }
 
     };
 
     /**
      * Collection of easing functions
+     * t: current time, b: beginning value, c: change in value, d: duration
      */
     grease.easing = {
 
-        linear: function (t, c, d, b) {
+        linear: function (t, b, c, d) {
             return c*t/d + b;
         },
 
-        easeInQuad: function (t, c, d, b) {
+        easeInQuad: function (t, b, c, d) {
             t /= d;
             return c*t*t + b;
         },
 
-        easeOutQuad: function (t, c, d, b) {
+        easeOutQuad: function (t, b, c, d) {
             t /= d;
             return -c * t*(t-2) + b;
         },
 
-        easeInOutQuad: function (t, c, d, b) {
+        easeInOutQuad: function (t, b, c, d) {
             t /= d/2;
             if (t < 1) {
                 return c/2*t*t + b;
@@ -1530,18 +1571,18 @@
             return -c/2 * (t*(t-2) - 1) + b;
         },
 
-        easeInCubic: function (t, c, d, b) {
+        easeInCubic: function (t, b, c, d) {
             t /= d;
             return c*t*t*t + b;
         },
 
-        easeOutCubic: function (t, c, d, b) {
+        easeOutCubic: function (t, b, c, d) {
             t /= d;
             t--;
             return c*(t*t*t + 1) + b;
         },
 
-        easeInOutCubic: function (t, c, d, b) {
+        easeInOutCubic: function (t, b, c, d) {
             t /= d/2;
             if (t < 1) {
                 return c/2*t*t*t + b;
@@ -1550,18 +1591,18 @@
             return c/2*(t*t*t + 2) + b;
         },
 
-        easeInQuart: function (t, c, d, b) {
+        easeInQuart: function (t, b, c, d) {
             t /= d;
             return c*t*t*t*t + b;
         },
 
-        easeOutQuart: function (t, c, d, b) {
+        easeOutQuart: function (t, b, c, d) {
             t /= d;
             t--;
             return -c * (t*t*t*t - 1) + b;
         },
 
-        easeInOutQuart: function (t, c, d, b) {
+        easeInOutQuart: function (t, b, c, d) {
             t /= d/2;
             if (t < 1) {
                 return c/2*t*t*t*t + b;
@@ -1570,18 +1611,18 @@
             return -c/2 * (t*t*t*t - 2) + b;
         },
 
-        easeInQuint: function (t, c, d, b) {
+        easeInQuint: function (t, b, c, d) {
             t /= d;
             return c*t*t*t*t*t + b;
         },
 
-        easeOutQuint: function (t, c, d, b) {
+        easeOutQuint: function (t, b, c, d) {
             t /= d;
             t--;
             return c*(t*t*t*t*t + 1) + b;
         },
 
-        easeInOutQuint: function (t, c, d, b) {
+        easeInOutQuint: function (t, b, c, d) {
             t /= d/2;
             if (t < 1) {
                 return c/2*t*t*t*t*t + b;
@@ -1590,27 +1631,27 @@
             return c/2*(t*t*t*t*t + 2) + b;
         },
 
-        easeInSine: function (t, c, d, b) {
+        easeInSine: function (t, b, c, d) {
             return -c * Math.cos(t/d * (Math.PI/2)) + c + b;
         },
 
-        easeOutSine: function (t, c, d, b) {
+        easeOutSine: function (t, b, c, d) {
             return c * Math.sin(t/d * (Math.PI/2)) + b;
         },
 
-        easeInOutSine: function (t, c, d, b) {
+        easeInOutSine: function (t, b, c, d) {
             return -c/2 * (Math.cos(Math.PI*t/d) - 1) + b;
         },
 
-        easeInExpo: function (t, c, d, b) {
+        easeInExpo: function (t, b, c, d) {
             return c * Math.pow( 2, 10 * (t/d - 1) ) + b;
         },
 
-        easeOutExpo: function (t, c, d, b) {
+        easeOutExpo: function (t, b, c, d) {
             return c * ( -Math.pow( 2, -10 * t/d ) + 1 ) + b;
         },
 
-        easeInOutExpo: function (t, c, d, b) {
+        easeInOutExpo: function (t, b, c, d) {
             t /= d/2;
             if (t < 1) {
                 return c/2 * Math.pow( 2, 10 * (t - 1) ) + b;
@@ -1619,18 +1660,18 @@
             return c/2 * ( -Math.pow( 2, -10 * t) + 2 ) + b;
         },
 
-        easeInCirc: function (t, c, d, b) {
+        easeInCirc: function (t, b, c, d) {
             t /= d;
             return -c * (Math.sqrt(1 - t*t) - 1) + b;
         },
 
-        easeOutCirc: function (t, c, d, b) {
+        easeOutCirc: function (t, b, c, d) {
             t /= d;
             t--;
             return c * Math.sqrt(1 - t*t) + b;
         },
 
-        easeInOutCirc: function (t, c, d, b) {
+        easeInOutCirc: function (t, b, c, d) {
             t /= d/2;
             if (t < 1) {
                 return -c/2 * (Math.sqrt(1 - t*t) - 1) + b;
