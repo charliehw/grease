@@ -119,13 +119,13 @@
 
         /**
          * Reference to constructor
-         * @memberof grease.Shape
+         * @memberof grease.Shape#
          */
         constructor: grease.Shape,
 
         /**
          * Apply the material to the canvas, called whilst the shape being rendered
-         * @memberof grease.Shape
+         * @memberof grease.Shape#
          * @param context
          * @param transform
          * @param {number} transform.scale
@@ -152,7 +152,7 @@
 
         /**
          * Defines an event handler
-         * @memberof grease.Shape
+         * @memberof grease.Shape#
          * @param {string} event
          * @param {function} handler
          * @returns {grease.Shape}
@@ -168,7 +168,7 @@
 
         /**
          * Removes an event handler
-         * @memberof grease.Shape
+         * @memberof grease.Shape#
          * @param {string} [event] - Removes handlers for a specific event
          * @param {function} [handler] - Removes a specific handler for a specific event
          * @returns {grease.Shape}
@@ -193,7 +193,7 @@
 
         /**
          * Calls all handlers for a specific event
-         * @memberof grease.Shape
+         * @memberof grease.Shape#
          * @param {string} type - Event type being triggered
          * @param {event} e
          * @param [data]
@@ -208,7 +208,7 @@
 
         /**
          * Test a point against the shape or the bounds set on it
-         * @memberof grease.Shape
+         * @memberof grease.Shape#
          * @param coords
          * @param transform
          * @returns {boolean}
@@ -232,7 +232,7 @@
 
         /**
          * Implemented by subclasses
-         * @memberof grease.Shape
+         * @memberof grease.Shape#
          * @returns {boolean}
          */
         checkCollision: function () {
@@ -241,7 +241,7 @@
 
         /**
          * Parent transforms are taken into account to render a shape. This function compunds the parent transform with the shape's transform
-         * @memberof grease.Shape
+         * @memberof grease.Shape#
          * @param transform
          * @returns {object}
          */
@@ -255,7 +255,7 @@
 
         /**
          * Move the shape relatively. Animate if duration supplied
-         * @memberof grease.Shape
+         * @memberof grease.Shape#
          * @param position Vector to move by or line to follow or a function that returns the required options
          * @param {number} [duration] Duration of animated movement
          * @param {function} [easing]
@@ -282,7 +282,7 @@
 
         /**
          * Get or set the relative position of the shape
-         * @memberof grease.Shape
+         * @memberof grease.Shape#
          * @param {number} [position]
          * @param {number} [position.x] Horizontal position to move to or vector
          * @param {number} [position.y] Vertical position to move to
@@ -298,7 +298,7 @@
 
         /**
          * Renders the shape by updating any animations and then drawing it
-         * @memberof grease.Shape
+         * @memberof grease.Shape#
          * @param context
          * @param transform
          * @param {frameInfo} frameInfo
@@ -315,7 +315,7 @@
 
         /**
          * Update the shape based on any queued animations
-         * @memberof grease.Shape
+         * @memberof grease.Shape#
          * @param {frameInfo} frameInfo Includes information on the current frame
          * @returns {grease.Shape}
          */
@@ -365,7 +365,7 @@
 
         /**
          * Add an animation to the shape's queue
-         * @memberof grease.Shape
+         * @memberof grease.Shape#
          * @param transform
          * @param duration
          * @param [easing]
@@ -384,7 +384,7 @@
 
         /**
          * Stop the shape's animation
-         * @memberof grease.Shape
+         * @memberof grease.Shape#
          * @param {boolean} [clearQueue] Determines if the queue of animations should be cleared
          * @param {boolean} [jumpToEnd] Determines if the current animation should be completed instantly or discarded
          * @returns {grease.Shape}
@@ -454,7 +454,7 @@
 
         /**
          * Actual constructor implementation
-         * @memberof grease.Rectangle
+         * @memberof grease.Rectangle#
          */
         constructor: function (opts) {
             this.width = opts.width || 0;
@@ -463,7 +463,7 @@
 
         /**
          * Draw the rectangle to the scene
-         * @memberof grease.Rectangle
+         * @memberof grease.Rectangle#
          * @param context
          * @param transform
          * @returns {grease.Rectangle}
@@ -478,7 +478,7 @@
 
         /**
          * Check if coords land inside the rectangle
-         * @memberof grease.Rectangle
+         * @memberof grease.Rectangle#
          * @param coords
          * @param transform
          * @returns {boolean}
@@ -508,7 +508,7 @@
 
         /**
          * Actual constructor implementation
-         * @memberof grease.Arc
+         * @memberof grease.Arc#
          */
         constructor: function (opts) {
             this.radius = opts.radius;
@@ -519,7 +519,7 @@
 
         /**
          * Draw the Arc in a context
-         * @memberof grease.Arc
+         * @memberof grease.Arc#
          * @param context
          * @param transform
          * @returns {grease.Arc}
@@ -534,7 +534,7 @@
 
         /**
          * Check if a point is within the Arc
-         * @memberof grease.Arc
+         * @memberof grease.Arc#
          * @param coords
          * @param transform
          * @returns {boolean}
@@ -554,7 +554,7 @@
 
         /**
          * Part of the test bounds check for Arcs. Also used by Circles
-         * @memberof grease.Arc
+         * @memberof grease.Arc#
          * @param coords
          * @param transform
          * @returns {boolean}
@@ -579,7 +579,7 @@
 
         /**
          * Actual constructor implementation
-         * @memberof grease.Circle
+         * @memberof grease.Circle#
          */
         constructor: function () {
             this.startAngle = 0;
@@ -588,7 +588,7 @@
 
         /**
          * Simpler version of the arc test bounds
-         * @memberof grease.Circle
+         * @memberof grease.Circle#
          * @param coords
          * @param transform
          * @return {boolean}
@@ -616,7 +616,7 @@
 
         /**
          * Actual constructor implementation
-         * @memberof grease.Line
+         * @memberof grease.Line#
          */
         constructor: function (opts) {
             this.isOutline = !opts.fill;
@@ -625,7 +625,7 @@
 
         /**
          * Add a point or array of points to the line
-         * @memberof grease.Line
+         * @memberof grease.Line#
          * @param points
          * @returns {grease.Line}
          */
@@ -643,7 +643,7 @@
 
         /**
          * Draw the line to the context
-         * @memberof grease.Line
+         * @memberof grease.Line#
          * @param context
          * @param transform
          * @returns {grease.Line}
@@ -695,7 +695,7 @@
 
         /**
          * Actual constructor implementation
-         * @memberof grease.Image
+         * @memberof grease.Image#
          */
         constructor: function (opts) {
             this.renderFlag = false;
@@ -707,7 +707,7 @@
 
         /**
          * Called when the image element is loaded
-         * @memberof grease.Image
+         * @memberof grease.Image#
          */
         onload: function (e) {
             // If a width and height was not provided, set them to the actual width/height of the image
@@ -720,7 +720,7 @@
 
         /**
          * Draw the image to the specified context
-         * @memberof grease.Image
+         * @memberof grease.Image#
          * @param context
          * @param transform
          * @param [clip]
@@ -756,7 +756,7 @@
 
         /**
          * Actual constructor implementation
-         * @memberof grease.Sprite    
+         * @memberof grease.Sprite#
          */
         constructor: function (opts) {
             var self = this;
@@ -780,7 +780,7 @@
 
         /**
          * Draw the sprite to the screen
-         * @memberof grease.Sprite
+         * @memberof grease.Sprite#
          * @param context
          * @param transform
          * @returns {grease.Sprite}
@@ -804,7 +804,7 @@
 
         /**
          * Step the sprite forward to the next cell in the sequence
-         * @memberof grease.Sprite
+         * @memberof grease.Sprite#
          * @param {number} [step] Amount to step through the current sequence, default +1
          * @returns {grease.Sprite}
          */
@@ -840,7 +840,7 @@
 
         /**
          * Actual constructor implementation
-         * @memberof grease.Text
+         * @memberof grease.Text#
          */
         constructor: function (opts) {
             this.text = opts.text;
@@ -848,7 +848,7 @@
 
         /**
          * Apply the material to the text and draw to the canvas
-         * @memberof grease.Text
+         * @memberof grease.Text#
          */
         applyMaterial: function (context, transform) {
             var mat = this.material;
@@ -873,7 +873,7 @@
 
         /**
          * Draw the image to the specified context
-         * @memberof grease.Text
+         * @memberof grease.Text#
          * @param context
          * @param transform
          * @returns {grease.Text}
@@ -956,7 +956,7 @@
 
         /**
          * Actual constructor implementation
-         * @memberof grease.Group
+         * @memberof grease.Group#
          */
         constructor: function () {
             this.shapes = [];
@@ -965,7 +965,7 @@
 
         /**
          * Draw the group of shapes
-         * @memberof grease.Group
+         * @memberof grease.Group#
          * @param context
          * @param transform
          * @param [transform.position] Position determined by the parent group
@@ -985,7 +985,7 @@
 
         /**
          * Add a shape, group, or array of shapes to a group
-         * @memberof grease.Group
+         * @memberof grease.Group#
          * @param {(grease.Shape|grease.Shape[])} target
          * @param {number} [zindex]
          * @returns {grease.Group}
@@ -1017,7 +1017,7 @@
 
         /**
          * Remove a specified shape from the group
-         * @memberof grease.Group
+         * @memberof grease.Group#
          * @param {grease.Shape} target
          * @returns {grease.Group}
          */
@@ -1037,7 +1037,7 @@
 
         /**
          * Empties the group
-         * @memberof grease.Group
+         * @memberof grease.Group#
          * @returns {grease.Group}
          */
         empty: function () {
@@ -1048,7 +1048,7 @@
 
         /**
          * Iterates over the group and calls the function passed to it, supplying shape and index and arguments
-         * @memberof grease.Group
+         * @memberof grease.Group#
          * @param {function} callback
          * @returns {grease.Group}
          */
@@ -1064,7 +1064,7 @@
 
         /**
          * Creates a representation of the event targets to allow for bubbling in nested group structures
-         * @memberof grease.Group
+         * @memberof grease.Group#
          * @param coords
          * @param transform
          * @returns match
@@ -1114,7 +1114,7 @@
 
         /**
          * Actual constructor implementation
-         * @memberof grease.Scene
+         * @memberof grease.Scene#
          */
         constructor: function (selectorOrWidth, height) {
             // The position of the scene determines the camera position, the scale determines camera zoom
@@ -1126,7 +1126,7 @@
 
         /**
          * Start the animation loop
-         * @memberof grease.Scene
+         * @memberof grease.Scene#
          * @fires start
          * @returns {grease.Scene}
          */
@@ -1141,7 +1141,7 @@
 
         /**
          * Pause the animation loop
-         * @memberof grease.Scene
+         * @memberof grease.Scene#
          * @fires stop
          * @returns {grease.Scene}
          */
@@ -1153,7 +1153,7 @@
 
         /**
          * Internal animation loop
-         * @memberof grease.Scene
+         * @memberof grease.Scene#
          * @fires render
          * @returns {grease.Scene}
          */
@@ -1177,7 +1177,7 @@
 
         /**
          * Update the frame info object
-         * @memberof grease.Scene
+         * @memberof grease.Scene#
          */
         updateFrameInfo: function () {
             var now = date.now();
@@ -1198,7 +1198,7 @@
 
         /**
          * Stop the scene and remove it's canvas
-         * @memberof grease.Scene
+         * @memberof grease.Scene#
          * @returns {grease.Scene}
          */
         destroy: function () {
@@ -1246,13 +1246,13 @@
 
         /**
          * Reference to constructor
-         * @memberof grease.EventManager
+         * @memberof grease.EventManager#
          */
         constructor: grease.EventManager,
 
         /**
          * Initialise the event manager, setting a handler on the canvas for all listed event types
-         * @memberof grease.EventManager
+         * @memberof grease.EventManager#
          */
         init: function () {
             var self = this;
@@ -1280,7 +1280,7 @@
 
         /**
          * Find all shapes matching the coordinates of the event and trigger that event on matches
-         * @memberof grease.EventManager
+         * @memberof grease.EventManager#
          * @param {greasyEvent} e
          */
         findMatches: function (e) {
@@ -1304,7 +1304,7 @@
 
         /**
          * Wrap the event as a custom object so we can stop custom propagation
-         * @memberof grease.EventManager
+         * @memberof grease.EventManager#
          * @param {event} e
          * @returns {greasyEvent}
          */
@@ -1322,7 +1322,7 @@
 
         /**
          * Reformat the matches into an array ordered for bubbling
-         * @memberof grease.EventManager
+         * @memberof grease.EventManager#
          * @param shape
          * @param [path]
          */
@@ -1381,13 +1381,13 @@
 
         /**
          * Reference to constructor
-         * @memberof grease.Canvas
+         * @memberof grease.Canvas#
          */
         constructor: grease.Canvas,
 
         /**
          * Get the drawing context, either from cache or from the HTML element
-         * @memberof grease.Canvas
+         * @memberof grease.Canvas#
          * @param type
          * @returns {CanvasContext}
          */
@@ -1400,7 +1400,7 @@
 
         /**
          * Clear the canvas
-         * @memberof grease.Canvas
+         * @memberof grease.Canvas#
          * @param [coords]
          * @returns {grease.Canvas}
          */
@@ -1418,7 +1418,7 @@
 
         /**
          * Returns the coordinates of the center point in the canvas
-         * @memberof grease.Canvas
+         * @memberof grease.Canvas#
          * @returns {object}
          */
         centerPoint: function () {
@@ -1430,7 +1430,7 @@
 
         /**
          * Get the width of the canvas
-         * @memberof grease.Canvas
+         * @memberof grease.Canvas#
          * @returns {number}
          */
         width: function () {
@@ -1439,7 +1439,7 @@
 
         /**
          * Get the height of the canvas
-         * @memberof grease.Canvas
+         * @memberof grease.Canvas#
          * @returns {number}
          */
         height: function () {
@@ -1448,7 +1448,7 @@
 
         /**
          * Get the offset of the canvas within the document
-         * @memberof grease.Canvas
+         * @memberof grease.Canvas#
          * @returns {object}
          */
         offset: function () {
@@ -1481,7 +1481,7 @@
 
         /**
          * Remove the canvas from the document
-         * @memberof grease.Canvas
+         * @memberof grease.Canvas#
          * @returns {grease.Canvas}
          */
         destroy: function () {
@@ -1491,7 +1491,7 @@
 
         /**
          * Hide the canvas
-         * @memberof grease.Canvas
+         * @memberof grease.Canvas#
          * @returns {grease.Canvas}
          */
         hide: function () {
@@ -1501,7 +1501,7 @@
 
         /**
          * Show the canvas
-         * @memberof grease.Canvas
+         * @memberof grease.Canvas#
          * @returns {grease.Canvas}
          */
         show: function () {
