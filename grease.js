@@ -7,7 +7,7 @@
  * @author charliehw
  * @version 0.0.1
  * @license MIT
- * @todo Gradients, Clipping, Transformation, Sprites, Dirty flags, Frame buffer
+ * @todo Gradients, Clipping, Transformation, Sprites, Dirty flags
  * @todo Optimise event checking by just working out what the mouse is interacting with each frame, rather than checking on every mouse event (thanks Toby)
  */
 
@@ -58,11 +58,6 @@
         };
     }());
 
-
-    /**
-     * A custom event object used by the library - gets passed to event handlers
-     * @typedef {object} greasyEvent
-     */
 
     /**
      * Information about the current frame
@@ -159,37 +154,41 @@
         /**
          * Defines an event handler
          * @memberof grease.Shape#
-         * @param {string} event
+         * @param {string} types - Event types to listen for, space delimited
          * @param {function} handler
          * @returns {grease.Shape}
          */
-        on: function (event, handler) {
-            if (this.handlers[event]) {
-                this.handlers[event].push(handler);
-            } else {
-                this.handlers[event] = [handler];
-            }
+        on: function (types, handler) {
+            _.each(types.split(' '), function (type) {
+                if (this.handlers[type]) {
+                    this.handlers[type].push(handler);
+                } else {
+                    this.handlers[type] = [handler];
+                }
+            }, this);
             return this;
         },
 
         /**
          * Removes an event handler
          * @memberof grease.Shape#
-         * @param {string} [event] - Removes handlers for a specific event
+         * @param {string} [types] - Removes handlers for event types, space delimited
          * @param {function} [handler] - Removes a specific handler for a specific event
          * @returns {grease.Shape}
          */
-        off: function (event, handler) {
-            if (event) {
-                if (this.handlers[event]) {
-                    if (handler) {
-                        // If handler is included, remove only that handler
-                        this.handlers[event] = _.without(this.handlers[event], handler);
-                    } else {
-                        // Otherwise remove all handlers for the specified event
-                        this.handlers[event] = null;
+        off: function (types, handler) {
+            if (types) {
+                _.each(types.split(' '), function (type) {
+                    if (this.handlers[type]) {
+                        if (handler) {
+                            // If handler is included, remove only that handler
+                            this.handlers[type] = _.without(this.handlers[type], handler);
+                        } else {
+                            // Otherwise remove all handlers for the specified event
+                            this.handlers[type] = null;
+                        }
                     }
-                }
+                }, this);
             } else {
                 this.handlers = {};
             }
@@ -198,17 +197,20 @@
         },
 
         /**
-         * Calls all handlers for a specific event
+         * Calls all handlers for specified event types
          * @memberof grease.Shape#
-         * @param {string} type - Event type being triggered
+         * @param {string} types - Event types being triggered, space delimited
          * @param {event} e
          * @param [data]
          * @returns {grease.Shape}
          */
-        trigger: function (type, e, data) {
-            _.each(this.handlers[type], function (handler) {
-                handler.call(this, e, data);
+        trigger: function (types, e, data) {
+            _.each(types.split(' '), function (type) {
+                _.each(this.handlers[type], function (handler) {
+                    handler.call(this, e, data);
+                }, this);
             }, this);
+
             return this;
         },
 
@@ -311,6 +313,7 @@
          * @returns {grease.Shape}
          */
         render: function (context, transform, frameInfo) {
+            // Apply any active animations
             this.update(frameInfo);
 
             transform = this.getAbsoluteTransform(transform);
@@ -331,8 +334,8 @@
             }
 
             var update = this.updateQueue[0],
-                newPosition = grease.utilities.vector(),
                 easing = update.easing,
+                newPosition,
                 elapsed;
 
             // If the animation has just started, store the initial transform
@@ -355,8 +358,10 @@
             }
 
 
-            newPosition.x = easing(elapsed, update.initial.position.x, update.transform.position.x || 0, update.duration || 1);
-            newPosition.y = easing(elapsed, update.initial.position.y, update.transform.position.y || 0, update.duration || 1);
+            newPosition = grease.utilities.vector(
+                easing(elapsed, update.initial.position.x, update.transform.position.x || 0, update.duration || 1),
+                easing(elapsed, update.initial.position.y, update.transform.position.y || 0, update.duration || 1)
+            );
 
             update.elapsed += frameInfo.elapsed;
 
@@ -705,10 +710,12 @@
          */
         constructor: function (opts) {
             this.renderFlag = false;
+
             this.elem = new root.Image();
-            this.elem.src = opts.src;
 
             this.elem.onload = this.onload.bind(this);
+            this.elem.src = opts.src;
+
         },
 
         /**
@@ -748,40 +755,34 @@
     /**
      * Represents a sprite
      * @constructor
-     * @augments grease.Shape
+     * @augments grease.Image
      * @param opts Sprite options
-     * @see grease.Shape options
-     * @param {number} opts.src Source of the image
+     * @see grease.Image options
      * @param {number} [opts.cols] Number of columns in uniform sprite image
      * @param {number} [opts.rows] Number of rows in uniform sprite image
      * @param {number} [opts.cells] Total number of cells in sprite if rows*cols is not appropriate
      * @param {number} [opts.frames] Manually defined frames if the sprite is not uniform 
      * @param {number} [opts.sequences] Definition of sequences for animating the sprite
      */
-    grease.Sprite = grease.Shape.extend({
+    grease.Sprite = grease.Image.extend({
 
         /**
          * Actual constructor implementation
          * @memberof grease.Sprite#
          */
         constructor: function (opts) {
-            var self = this;
 
             this.rows = opts.rows;
             this.cols = opts.cols;
             this.cells = opts.cells || this.rows * this.cols;
 
-            this.image = new grease.Image({
-                src: opts.src
-            }).on('load', function () {
-                this.width = self.cellWidth = this.width / self.cols;
-                this.height = self.cellHeight = this.height / self.rows;
+            this.on('load', function () {
+                this.width = this.cellWidth = this.width / this.cols;
+                this.height = this.cellHeight = this.height / this.rows;
             });
 
-            // The sprite uses its image to check for events
-            this.bounds = this.image;
-
             this.activeCell = 0;
+
         },
 
         /**
@@ -801,9 +802,7 @@
                     height: this.cellHeight
                 };
 
-            if (this.image.renderFlag) {
-                this.image.draw(context, transform, clip);
-            }
+            grease.Image.prototype.draw.call(this, context, transform, clip);
 
             return this;
         },
@@ -1113,8 +1112,10 @@
      * Represents a scene, managing the canvas, animation, rendering etc.
      * @constructor
      * @augments grease.Group
-     * @param {string|number} selectorOrWidth Selector to match an existing canvas element or width of new element
-     * @param {number} [height]
+     * @param {string} selector - Selector for the container DOM node
+     * @param {number} width - Width of the scene
+     * @param {number} height - Height of the scene
+     * @throws {Error} No container found matching selector
      */
     grease.Scene = grease.Group.extend({
 
@@ -1122,10 +1123,15 @@
          * Actual constructor implementation
          * @memberof grease.Scene#
          */
-        constructor: function (selectorOrWidth, height) {
-            // The position of the scene determines the camera position, the scale determines camera zoom
+        constructor: function (selector, width, height) {
 
-            this.canvas = new grease.Canvas(selectorOrWidth, height);
+            this.container = doc.querySelector(selector);
+
+            if (!this.container) {
+                throw new Error('No container found matching selector, ' + selector + '. Cannot create scene.');
+            }
+
+            this.frameBuffer = new grease.FrameBuffer(this.container, width, height);
             this.eventManager = new grease.EventManager(this);
 
         },
@@ -1170,9 +1176,9 @@
                 root.requestAnimationFrame(function () {    
                     self.updateFrameInfo();
                     self.trigger('render', self.frameInfo);
-                    self.canvas.clear();
 
-                    self.render(self.canvas.getContext(), self.transform, self.frameInfo);
+                    self.render(self.frameBuffer.context(), self.transform, self.frameInfo);
+                    self.frameBuffer.flip();
 
                     self.loop();
                 });
@@ -1209,8 +1215,70 @@
          */
         destroy: function () {
             this.stop();
-            this.canvas.destroy();
+            this.frameBuffer.destroy();
             return this;
+        }
+
+    });
+
+    
+    /**
+     * Frame buffer
+     * @constructor
+     * @param {HTMLElement} container
+     * @param {number} width
+     * @param {number} height
+     */
+    grease.FrameBuffer = function (container, width, height) {
+
+        var first = new grease.Canvas(container, width, height),
+            second = new grease.Canvas(container, width, height);
+
+        second.hide();
+
+        this.canvases = [first, second];
+        this.active = 0;
+        this.canvas = this.canvases[1];
+
+    };
+
+    _.extend(grease.FrameBuffer.prototype, {
+
+        /**
+         * Reference to the constructor
+         * @memberof grease.FrameBuffer#
+         */
+        constructor: grease.FrameBuffer,
+
+        /**
+         * Clear and hide the old frame, show the newly rendered frame
+         * @memberof grease.FrameBuffer#
+         */
+        flip: function () {
+
+            this.canvases[this.active].hide().clear();
+            this.canvas = this.canvases[this.active];
+            this.active = this.active ? 0 : 1;
+            this.canvases[this.active].show();
+
+        },
+
+        /**
+         * Get the context for the currently hidden frame
+         * @memberof grease.FrameBuffer#
+         * @returns {CanvasContext}
+         */
+        context: function () {
+            return this.canvas.context();
+        },
+
+        /**
+         * Destroy the frame buffer
+         * @memberof grease.FrameBuffer#
+         */
+        destroy: function () {
+            this.canvases[0].destroy();
+            this.canvases[1].destroy();
         }
 
     });
@@ -1267,19 +1335,20 @@
         constructor: grease.EventManager,
 
         /**
-         * Initialise the event manager, setting a handler on the canvas for all listed event types
+         * Initialise the event manager, setting a handler on the scene container for all listed event types
          * @memberof grease.EventManager#
          */
         init: function () {
-            var self = this;
+            var self = this,
+                pointerEvents = grease.EventManager.events.MOUSE.concat(grease.EventManager.events.TOUCH);
 
-            // Set up canvas event handlers and delegation
-            _.each(grease.EventManager.events.MOUSE.concat(grease.EventManager.events.TOUCH), function (event) {
-                self.scene.canvas.elem.addEventListener(event, function (e) {
+            // Set up event handlers and delegation
+            _.each(pointerEvents, function (event) {
+                self.scene.container.addEventListener(event, function (e) {
                     e.preventDefault();
                     if (self.captureEvents) {
-                        var wrappedEvent = self.wrapEvent(e);
-                        self.findMatches(wrappedEvent);
+                        var greasyEvent = new grease.Event(e);
+                        self.findMatches(greasyEvent);
                     }            
                 });
             });
@@ -1319,28 +1388,6 @@
         },
 
         /**
-         * Wrap the event as a custom object so we can stop custom propagation
-         * @memberof grease.EventManager#
-         * @param {event} e
-         * @returns {greasyEvent}
-         */
-        wrapEvent: function (e) {
-            var touch = e;
-            if (e.changedTouches) {
-                touch = e.changedTouches[0];
-            }
-
-            return {
-                originalEvent: e,
-                x: touch.clientX,
-                y: touch.clientY,
-                type: e.type,
-                propagationStopped: false,
-                stopPropagation: function () {this.propagationStopped = true;}
-            };
-        },
-
-        /**
          * Reformat the matches into an array ordered for bubbling
          * @memberof grease.EventManager#
          * @param shape
@@ -1365,35 +1412,62 @@
 
 
 
+    /**
+     * Custom event wrapper
+     * @constructor
+     * @param {Event} e
+     */
+    grease.Event = function (e) {
+
+        var touch = e;
+        if (e.changedTouches) {
+            touch = e.changedTouches[0];
+        }
+
+        this.x = touch.clientX;
+        this.y = touch.clientY;
+
+        this.originalEvent = e;
+        this.type = e.type;
+        this.propagationStopped = false;
+
+    };
+
+    _.extend(grease.Event.prototype, {
+
+        /**
+         * Reference to contructor
+         * @memberof grease.Event#
+         */
+        constructor: grease.Event,
+
+        /**
+         * Stops propagation of the event
+         * @memberof grease.Event#
+         */
+        stopPropagation: function () {
+            this.propagationStopped = true;
+        }
+
+    });
+
 
 
     /**
      * Represents a canvas element
      * @contructor
-     * @param {string|number} selectorOrWidth
-     * @param {number} [height]
-     * @throws {Error} Element not found from provided selector
+     * @param {HTMLElement} container
+     * @param {number} width
+     * @param {number} height
      */
-    grease.Canvas = function (selectorOrWidth, height) {
+    grease.Canvas = function (container, width, height) {
 
-        // If the first argument is a string, expect a selector
-        if (_.isString(selectorOrWidth)) {
+        this.elem = doc.createElement('canvas');
 
-            this.elem = doc.querySelector(selectorOrWidth);
-            if (!(this.elem && this.elem.getContext)) {
-                throw new Error('Canvas not found from selector.');
-            }
+        this.elem.width = width;
+        this.elem.height = height;
 
-        } else {
-
-            this.elem = doc.createElement('canvas');
-            if (_.isNumber(selectorOrWidth) && _.isNumber(height)) {
-                this.elem.width = selectorOrWidth;
-                this.elem.height = height;
-            }
-            doc.body.appendChild(this.elem);
-
-        }
+        container.appendChild(this.elem);
 
     };
 
@@ -1411,7 +1485,7 @@
          * @param type
          * @returns {CanvasContext}
          */
-        getContext: function (type) {
+        context: function (type) {
             if (!this._context || type) {
                 this._context = this.elem.getContext(type || '2d');
             }
@@ -1432,7 +1506,7 @@
                 height: this.height()
             };
 
-            this.getContext().clearRect(coords.x, coords.y, coords.width, coords.height);
+            this.context().clearRect(coords.x, coords.y, coords.width, coords.height);
             return this;
         },
 
@@ -1464,39 +1538,6 @@
          */
         height: function () {
             return this.elem.height;
-        },
-
-        /**
-         * Get the offset of the canvas within the document
-         * @memberof grease.Canvas#
-         * @returns {object}
-         */
-        offset: function () {
-            var offset, elem;
-
-            if (this.cachedOffset) {
-                // Use the cached offset if it is available
-                // We are assuming the canvas itself will not move so we don't have to calculate this all the time
-                offset = this.cachedOffset;
-            } else {
-                // Calculate the offset by summing up all offset throughout the document hierarchy
-                elem = this.elem;
-                offset = {
-                    left: elem.offsetLeft,
-                    top: elem.offsetTop
-                };
-
-                do {
-                    elem = elem.offsetParent;
-                    offset.left += elem.offsetLeft;
-                    offset.top += elem.offsetTop;
-                } while (elem.offsetParent);
-
-                // Then cache it
-                this.cachedOffset = offset;
-            }
-
-            return offset;
         },
 
         /**

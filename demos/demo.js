@@ -13,7 +13,7 @@ var updateInfo = (function () {
 
 window.onload = function () {
 	
-	var scene = new grease.Scene('#canvas');
+	var scene = new grease.Scene('#scene', 700, 500);
 
 	var shapes = [],
 		shape,
