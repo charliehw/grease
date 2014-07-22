@@ -4,6 +4,7 @@ module('grease.Shape tests');
 
 
 test('Shape extension', function () {
+
 	var NewShape = grease.Shape.extend({
 		constructor: function () {}
 	});
@@ -15,10 +16,12 @@ test('Shape extension', function () {
 
 	ok(instanceOfNewShape instanceof NewShape, 'Newly created shape constructed properly');
 	ok(instanceOfNewShape instanceof grease.Shape, 'Prototype chain set up properly');
+
 });
 
 
 test('Shape position', function () {
+
 	var shape = new grease.Shape({
 		x: 30,
 		y: 20
@@ -39,10 +42,12 @@ test('Shape position', function () {
 	});
 
 	ok(shape.position().x === 70 && shape.position().y === 75, 'Shape moved to expected position after call to shape.move()');
+
 });
 
 
 test('Event handling', function () {
+
 	var shape = new grease.Shape({});
 
 	shape.on('click', function () {
@@ -50,5 +55,11 @@ test('Event handling', function () {
 	});
 
 	shape.trigger('click');
+
+	shape.on('click', function () {
+		ok(false, 'This assertion should never run');
+	});
+
+	shape.off('click').trigger('click');
 
 });

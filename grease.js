@@ -60,19 +60,6 @@
 
 
     /**
-     * Information about the current frame
-     * @typedef {object} frameInfo
-     */
-
-    /**
-     * A basic x, y vector
-     * @typedef {object} vector
-     * @property {number} x Horizontal component
-     * @property {number} y Vertical component
-     */
-
-
-    /**
      * Basic subclass drawable shape
      * @constructor
      * @param opts
@@ -84,6 +71,7 @@
      * @param {grease.Material} [opts.material=grease.defaultMaterial]
      */
     grease.Shape = function (opts) {
+
         // Prevent the base constructor from being called more than once
         if (this.constructed) {
             return this;
@@ -94,7 +82,7 @@
 
         this.transform = {
             position: grease.utilities.vector(opts.x || 0, opts.y || 0),
-            scale: typeof opts.scale === 'undefined' ? 1 : opts.scale,
+            scale: _.isUndefined(opts.scale) ? 1 : opts.scale,
             rotation: opts.rotation || 0
         };
 
@@ -114,6 +102,7 @@
         this.updateQueue = [];
 
         this.constructed = true;
+
     };
 
     _.extend(grease.Shape.prototype, {
@@ -248,7 +237,7 @@
         },
 
         /**
-         * Parent transforms are taken into account to render a shape. This function compunds the parent transform with the shape's transform
+         * Parent transforms are taken into account to render a shape. This function compounds the parent transform with the shape's transform
          * @memberof grease.Shape#
          * @param transform
          * @returns {object}
@@ -262,7 +251,7 @@
         },
 
         /**
-         * Move the shape relatively. Animate if duration supplied
+         * Move the shape relative to current position. Animate if duration supplied
          * @memberof grease.Shape#
          * @param position Vector to move by or line to follow or a function that returns the required options
          * @param {number} [duration] Duration of animated movement
@@ -289,7 +278,7 @@
         },
 
         /**
-         * Get or set the relative position of the shape
+         * Get or set the position of the shape relative to its group
          * @memberof grease.Shape#
          * @param {number} [position]
          * @param {number} [position.x] Horizontal position to move to or vector
@@ -334,7 +323,6 @@
             }
 
             var update = this.updateQueue[0],
-                easing = update.easing,
                 newPosition,
                 elapsed;
 
@@ -353,14 +341,14 @@
                 elapsed = update.elapsed;
             }
 
-            if (!easing || typeof easing !== 'function') {
-                easing = grease.easing[update.easing] || grease.easing['linear'];
+            if (!update.easing || typeof update.easing !== 'function') {
+                update.easing = grease.easing[update.easing] || grease.easing['linear'];
             }
 
 
             newPosition = grease.utilities.vector(
-                easing(elapsed, update.initial.position.x, update.transform.position.x || 0, update.duration || 1),
-                easing(elapsed, update.initial.position.y, update.transform.position.y || 0, update.duration || 1)
+                update.easing(elapsed, update.initial.position.x, update.transform.position.x || 0, update.duration || 1),
+                update.easing(elapsed, update.initial.position.y, update.transform.position.y || 0, update.duration || 1)
             );
 
             update.elapsed += frameInfo.elapsed;
@@ -495,10 +483,10 @@
          * @returns {boolean}
          */
         checkCollision: function (coords, transform) {
-            var horizontal = coords.x >= transform.position.x && coords.x <= transform.position.x + this.width * transform.scale,
-                vertical = coords.y >= transform.position.y && coords.y <= transform.position.y + this.height * transform.scale;
+            var insideHorizontally = coords.x >= transform.position.x && coords.x <= transform.position.x + this.width * transform.scale,
+                insideVertically = coords.y >= transform.position.y && coords.y <= transform.position.y + this.height * transform.scale;
 
-            return horizontal && vertical;
+            return insideHorizontally && insideVertically;
         }
 
     });
@@ -1237,8 +1225,8 @@
         second.hide();
 
         this.canvases = [first, second];
-        this.active = 0;
-        this.canvas = this.canvases[1];
+        this.visible = 0;
+        this.buffer = second;
 
     };
 
@@ -1256,10 +1244,10 @@
          */
         flip: function () {
 
-            this.canvases[this.active].hide().clear();
-            this.canvas = this.canvases[this.active];
-            this.active = this.active ? 0 : 1;
-            this.canvases[this.active].show();
+            this.buffer = this.canvases[this.visible].hide().clear();
+            this.visible = this.visible ? 0 : 1;
+
+            this.canvases[this.visible].show();
 
         },
 
@@ -1269,7 +1257,7 @@
          * @returns {CanvasContext}
          */
         context: function () {
-            return this.canvas.context();
+            return this.buffer.context();
         },
 
         /**
@@ -1366,7 +1354,7 @@
         /**
          * Find all shapes matching the coordinates of the event and trigger that event on matches
          * @memberof grease.EventManager#
-         * @param {greasyEvent} e
+         * @param {grease.Event} e
          */
         findMatches: function (e) {
             var matchingShapes = this.scene.testBounds(e, this.scene.transform),

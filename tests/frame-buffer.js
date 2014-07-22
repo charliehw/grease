@@ -10,11 +10,11 @@ test('Frame buffer', function () {
 		canvases = document.querySelectorAll('canvas');
 
 	ok(canvases[0].style.display === '' && canvases[1].style.display === 'none', 'Canvases created, one hidden, one visible');
-	ok(frameBuffer.canvases[1] === frameBuffer.canvas, 'The hidden canvas will be drawn to');
+	ok(frameBuffer.canvases[1] === frameBuffer.buffer, 'The hidden canvas will be drawn to');
 
 	frameBuffer.flip();
 
 	ok(canvases[0].style.display === 'none' && canvases[1].style.display === 'block', 'Canvases flipped');
-	ok(frameBuffer.canvases[0] === frameBuffer.canvas, 'The hidden canvas will be drawn to after the flip');
+	ok(frameBuffer.canvases[0] === frameBuffer.buffer, 'The hidden canvas will be drawn to after the flip');
 
 });
