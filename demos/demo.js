@@ -11,20 +11,19 @@ var updateInfo = (function () {
 	};
 }());
 
+function removeShape() {
+	scene.remove(this);
+}
+
 window.onload = function () {
 	
-	var scene = new grease.Scene('#scene', 700, 500);
+	var scene = new grease.Scene('#scene');
 
 	var shapes = [],
 		shape,
 		mat,
 		opts,
 		number = 100;
-
-
-	function removeShape() {
-		scene.remove(this);
-	}
 
 	while (number--) {
 		mat = new grease.Material({fillStyle: 'rgb(' + random(0, 255) + ', ' + random(0, 255) + ', ' + random(0, 255) + ')'});

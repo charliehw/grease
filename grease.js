@@ -7,7 +7,7 @@
  * @author charliehw
  * @version 0.0.1
  * @license MIT
- * @todo Gradients, Clipping, Transformation, Sprites, Dirty flags
+ * @todo Gradients, Transformation, Sprites, Dirty flags
  * @todo Optimise event checking by just working out what the mouse is interacting with each frame, rather than checking on every mouse event (thanks Toby)
  */
 
@@ -72,11 +72,6 @@
      */
     grease.Shape = function (opts) {
 
-        // Prevent the base constructor from being called more than once
-        if (this.constructed) {
-            return this;
-        }
-
         this.renderFlag = true;
         this.material = opts.material || grease.defaultMaterial;
 
@@ -100,8 +95,6 @@
 
         // Updates used for animation
         this.updateQueue = [];
-
-        this.constructed = true;
 
     };
 
@@ -244,9 +237,9 @@
          */
         getAbsoluteTransform: function (transform) {
             return {
-                position: grease.utilities.vector(this.transform.position.x + (transform.position.x || 0), this.transform.position.y + (transform.position.y || 0)),
-                scale: this.transform.scale * (transform.scale || 1),
-                rotation: this.transform.scale + (transform.rotation || 0)
+                position: grease.utilities.vector(this.transform.position.x + transform.position.x, this.transform.position.y + transform.position.y),
+                scale: this.transform.scale * transform.scale,
+                rotation: this.transform.rotation + transform.rotation 
             };
         },
 
@@ -704,6 +697,9 @@
             this.elem.onload = this.onload.bind(this);
             this.elem.src = opts.src;
 
+            // Where to clip the image if necessary
+            this.clip = opts.clip;
+
         },
 
         /**
@@ -724,12 +720,11 @@
          * @memberof grease.Image#
          * @param context
          * @param transform
-         * @param [clip]
          * @returns {grease.Image}
          */
-        draw: function (context, transform, clip) {
-            if (clip) {
-                context.drawImage(this.elem, clip.x, clip.y, clip.width, clip.height, transform.position.x, transform.position.y, this.width * transform.scale, this.height * transform.scale);
+        draw: function (context, transform) {
+            if (this.clip) {
+                context.drawImage(this.elem, this.clip.x, this.clip.y, this.clip.width, this.clip.height, transform.position.x, transform.position.y, this.width * transform.scale, this.height * transform.scale);
             } else {
                 context.drawImage(this.elem, transform.position.x, transform.position.y, this.width * transform.scale, this.height * transform.scale);                
             }
@@ -782,15 +777,16 @@
          */
         draw: function (context, transform) {
             var positionInRow = this.activeCell % this.cols,
-                positionInCol = (this.activeCell - positionInRow) / this.cols,
-                clip = {
-                    x: positionInRow * this.cellWidth,
-                    y: positionInCol * this.cellHeight,
-                    width: this.cellWidth,
-                    height: this.cellHeight
-                };
+                positionInCol = (this.activeCell - positionInRow) / this.cols;
 
-            grease.Image.prototype.draw.call(this, context, transform, clip);
+            this.clip = {
+                x: positionInRow * this.cellWidth,
+                y: positionInCol * this.cellHeight,
+                width: this.cellWidth,
+                height: this.cellHeight
+            };
+
+            grease.Image.prototype.draw.call(this, context, transform);
 
             return this;
         },
@@ -1101,8 +1097,6 @@
      * @constructor
      * @augments grease.Group
      * @param {string} selector - Selector for the container DOM node
-     * @param {number} width - Width of the scene
-     * @param {number} height - Height of the scene
      * @throws {Error} No container found matching selector
      */
     grease.Scene = grease.Group.extend({
@@ -1111,7 +1105,7 @@
          * Actual constructor implementation
          * @memberof grease.Scene#
          */
-        constructor: function (selector, width, height) {
+        constructor: function (selector) {
 
             this.container = doc.querySelector(selector);
 
@@ -1119,7 +1113,7 @@
                 throw new Error('No container found matching selector, ' + selector + '. Cannot create scene.');
             }
 
-            this.frameBuffer = new grease.FrameBuffer(this.container, width, height);
+            this.frameBuffer = new grease.FrameBuffer(this.container);
             this.eventManager = new grease.EventManager(this);
 
         },
@@ -1211,16 +1205,14 @@
 
     
     /**
-     * Frame buffer
+     * Frame buffer - ensures the scene is rendered to a hidden canvas each frame, which is then shown, therefore preventing partial frames
      * @constructor
      * @param {HTMLElement} container
-     * @param {number} width
-     * @param {number} height
      */
-    grease.FrameBuffer = function (container, width, height) {
+    grease.FrameBuffer = function (container) {
 
-        var first = new grease.Canvas(container, width, height),
-            second = new grease.Canvas(container, width, height);
+        var first = new grease.Canvas(container, container.clientWidth, container.clientHeight),
+            second = new grease.Canvas(container, container.clientWidth, container.clientHeight);
 
         second.hide();
 
@@ -1443,7 +1435,7 @@
 
     /**
      * Represents a canvas element
-     * @contructor
+     * @constructor
      * @param {HTMLElement} container
      * @param {number} width
      * @param {number} height
@@ -1470,7 +1462,7 @@
         /**
          * Get the drawing context, either from cache or from the HTML element
          * @memberof grease.Canvas#
-         * @param type
+         * @param [type='2d']
          * @returns {CanvasContext}
          */
         context: function (type) {

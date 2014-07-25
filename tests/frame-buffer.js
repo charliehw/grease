@@ -6,7 +6,7 @@ module('grease.FrameBuffer tests');
 test('Frame buffer', function () {
 
 	var container = document.querySelector('#scene'),
-		frameBuffer = new grease.FrameBuffer(container, 200, 200),
+		frameBuffer = new grease.FrameBuffer(container),
 		canvases = document.querySelectorAll('canvas');
 
 	ok(canvases[0].style.display === '' && canvases[1].style.display === 'none', 'Canvases created, one hidden, one visible');
