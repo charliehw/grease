@@ -3,12 +3,12 @@ module.exports = function(grunt) {
 
 	// Project configuration.
 	grunt.initConfig({
-		// Metadata.
+
 		banner: '/*! grease.js - ' +
 			'<%= grunt.template.today("yyyy-mm-dd") %>\n' +
 			' * Author: charliehw;' +
 			' Licensed MIT */\n',
-		// Task configuration.
+
 		concat: {
 			options: {
 				banner: '<%= banner %>',
@@ -19,6 +19,7 @@ module.exports = function(grunt) {
 				dest: 'dist/<%= pkg.name %>.js'
 			}
 		},
+
 		uglify: {
 			options: {
 				banner: '<%= banner %>'
@@ -28,6 +29,7 @@ module.exports = function(grunt) {
 				dest: 'grease.min.js'
 			}
 		},
+
 		jshint: {
 			options: {
 				curly: true,
@@ -54,19 +56,13 @@ module.exports = function(grunt) {
 				src: 'tests/*.js'
 			}
 		},
+
 		qunit: {
 			all: ['tests/*.html']
 		},
-		watch: {
-			gruntfile: {
-				files: '<%= jshint.gruntfile.src %>',
-				tasks: ['jshint:gruntfile']
-			},
-			lib_test: {
-				files: '<%= jshint.grease.src %>',
-				tasks: ['jshint:grease', 'qunit']
-			}
-		},
+
+		clean: ['doc'],
+
 		jsdoc: {
 			dist: {
 				src: ['grease.js'],
@@ -75,6 +71,7 @@ module.exports = function(grunt) {
 				}
 			}
 		}
+
 	});
 
 	// These plugins provide necessary tasks.
@@ -82,13 +79,13 @@ module.exports = function(grunt) {
 	grunt.loadNpmTasks('grunt-contrib-uglify');
 	grunt.loadNpmTasks('grunt-contrib-qunit');
 	grunt.loadNpmTasks('grunt-contrib-jshint');
-	grunt.loadNpmTasks('grunt-contrib-watch');
+	grunt.loadNpmTasks('grunt-contrib-clean');
 	grunt.loadNpmTasks('grunt-jsdoc');
 
 	// Default task.
-	grunt.registerTask('default', ['jshint', 'qunit', 'uglify', 'jsdoc']);
+	grunt.registerTask('default', ['jshint', 'qunit', 'uglify', 'clean', 'jsdoc']);
 	grunt.registerTask('test', ['jshint', 'qunit']);
-	grunt.registerTask('docs', ['jsdoc']);
+	grunt.registerTask('docs', ['clean', 'jsdoc']);
 	grunt.registerTask('dist', ['uglify']);
 
 };

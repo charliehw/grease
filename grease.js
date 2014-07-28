@@ -7,7 +7,10 @@
  * @author charliehw
  * @version 0.0.1
  * @license MIT
- * @todo Gradients, Transformation, Sprites, Dirty flags
+ * @todo Gradient materials
+ * @todo Transformation - rotation, proper scaling
+ * @todo Sprites - custom frames and sequences
+ * @todo Dirty flags - no need to calculate the absolute transform for a shape that hasn't changed since the last frame
  * @todo Optimise event checking by just working out what the mouse is interacting with each frame, rather than checking on every mouse event (thanks Toby)
  */
 
@@ -182,14 +185,13 @@
          * Calls all handlers for specified event types
          * @memberof grease.Shape#
          * @param {string} types - Event types being triggered, space delimited
-         * @param {event} e
-         * @param [data]
+         * @param {event} [e]
          * @returns {grease.Shape}
          */
-        trigger: function (types, e, data) {
+        trigger: function (types, e) {
             _.each(types.split(' '), function (type) {
                 _.each(this.handlers[type], function (handler) {
-                    handler.call(this, e, data);
+                    handler.call(this, e);
                 }, this);
             }, this);
 
@@ -244,7 +246,7 @@
         },
 
         /**
-         * Move the shape relative to current position. Animate if duration supplied
+         * Move the shape relative to its current position. Animate if duration supplied
          * @memberof grease.Shape#
          * @param position Vector to move by or line to follow or a function that returns the required options
          * @param {number} [duration] Duration of animated movement
@@ -407,10 +409,11 @@
      * @param prototypeMethods
      * @param staticMethods
      * @returns {function}
-     * @example var Star = grease.Shape.extend({
-     *              constructor: function (opts) {...},
-     *              draw: function (context, transform) {...}
-     *          });
+     * @example 
+     *  var Star = grease.Shape.extend({
+     *      constructor: function (opts) {...},
+     *      draw: function (context, transform) {...}
+     *  });
      */
     grease.Shape.extend = function (prototypeMethods, staticMethods) {
         var constructorToBeExtended = this;
@@ -995,7 +998,7 @@
                         this.shapes.push(shape);                  
                     }
                 } else {
-                    throw new TypeError('Attempt to add a non-shape to the ' + typeof this + ' failed.');
+                    throw new TypeError('Attempt to add a non-shape to the group failed.');
                 }
             }, this);
 
@@ -1302,7 +1305,9 @@
             'keyup',
             'keydown',
             'keypress'
-        ]
+        ],
+
+        RESIZE: 'resize'
         
     };
 
@@ -1341,6 +1346,12 @@
                     }
                 });
             });
+
+            self.scene.container.addEventListener(grease.EventManager.events.RESIZE, function () {
+                self.scene.trigger(grease.EventManager.events.RESIZE, {
+                    type: grease.EventManager.events.RESIZE
+                });
+            });
         },
 
         /**
@@ -1352,6 +1363,11 @@
             var matchingShapes = this.scene.testBounds(e, this.scene.transform),
                 bubblePath = this.getBubblePath(matchingShapes).reverse(),
                 shape;
+
+            // Events on the container should always trigger on the scene, even if no shapes match
+            if (!bubblePath.length) {
+                bubblePath.push(this.scene);
+            }
 
             for (var index = 0, length = bubblePath.length; index < length && !e.propagationStopped; index++) {
                 shape = bubblePath[index];
@@ -1372,6 +1388,7 @@
          * @memberof grease.EventManager#
          * @param shape
          * @param [path]
+         * @returns {array} - Ordered path of matching shapes
          */
         getBubblePath: function (shape, path) {
             path = path || [];
@@ -1503,21 +1520,33 @@
         },
 
         /**
-         * Get the width of the canvas
+         * Get or set the width of the canvas
          * @memberof grease.Canvas#
-         * @returns {number}
+         * @param {number} [width]
+         * @returns {number|grease.Canvas}
          */
-        width: function () {
-            return this.elem.width;
+        width: function (width) {
+            if (_.isUndefined(width)) {
+                return this.elem.width;
+            } else {
+                this.elem.width = width;
+                return this;
+            }
         },
 
         /**
-         * Get the height of the canvas
+         * Get or set the height of the canvas
          * @memberof grease.Canvas#
-         * @returns {number}
+         * @param {number} [height]
+         * @returns {number|grease.Canvas}
          */
-        height: function () {
-            return this.elem.height;
+        height: function (height) {
+            if (_.isUndefined(height)) {
+                return this.elem.height;
+            } else {
+                this.elem.height = height;
+                return this;
+            }
         },
 
         /**
