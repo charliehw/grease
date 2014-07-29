@@ -1,5 +1,3 @@
-/* global grease, module, test, ok */
-
 module('grease.Group tests');
 
 

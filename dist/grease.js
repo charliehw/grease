@@ -1,31 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>JSDoc: Source: grease.js</title>
-    
-    <script src="scripts/prettify/prettify.js"> </script>
-    <script src="scripts/prettify/lang-css.js"> </script>
-    <!--[if lt IE 9]>
-      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
-    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
-    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
-</head>
-
-<body>
-
-<div id="main">
-    
-    <h1 class="page-title">Source: grease.js</h1>
-    
-    
-
-
-    
-    <section>
-        <article>
-            <pre class="prettyprint source"><code>/**
+/**
  * 2D animation framework for HTML canvas
  * @file grease.js
  * @requires underscore.js
@@ -761,8 +734,8 @@ grease.Rectangle = grease.Shape.extend({
      * @returns {boolean}
      */
     checkCollision: function (coords, transform) {
-        var insideHorizontally = coords.x >= transform.position.x && coords.x &lt;= transform.position.x + this.width * transform.scale,
-            insideVertically = coords.y >= transform.position.y && coords.y &lt;= transform.position.y + this.height * transform.scale;
+        var insideHorizontally = coords.x >= transform.position.x && coords.x <= transform.position.x + this.width * transform.scale,
+            insideVertically = coords.y >= transform.position.y && coords.y <= transform.position.y + this.height * transform.scale;
 
         return insideHorizontally && insideVertically;
     }
@@ -817,14 +790,14 @@ grease.Arc = grease.Shape.extend({
     checkCollision: function (coords, transform) {
         // Check angle is between start and end
         var angle = math.atan2(coords.y - transform.position.y, coords.x - transform.position.x);
-        if (angle &lt; 0) {
+        if (angle < 0) {
             angle = (math.PI - angle) + math.PI;
         }
 
-        // Check distance &lt;= radius
+        // Check distance <= radius
         var distance = this.checkDistance(coords, transform);
 
-        return angle >= this.startAngle && angle &lt;= this.endAngle && distance;
+        return angle >= this.startAngle && angle <= this.endAngle && distance;
     },
 
     /**
@@ -836,7 +809,7 @@ grease.Arc = grease.Shape.extend({
      */
     checkDistance: function (coords, transform) {
         var distance = math.sqrt(math.pow(coords.x - transform.position.x, 2) + math.pow(coords.y - transform.position.y, 2));
-        return distance &lt;= (this.radius + (this.material.lineWidth / 2)) * transform.scale;
+        return distance <= (this.radius + (this.material.lineWidth / 2)) * transform.scale;
     }
 
 });
@@ -1069,7 +1042,7 @@ grease.Sprite = grease.Image.extend({
             step = 1;
         }
 
-        if (this.activeCell + step &lt; 0) {
+        if (this.activeCell + step < 0) {
             this.activeCell = this.cells + 1 + step;
         } else if (this.activeCell + step > this.cells) {
             this.activeCell = (this.activeCell + step) - this.cells;
@@ -1288,7 +1261,7 @@ _.extend(grease.Listener.prototype, {
             bubblePath.push(this.scene);
         }
 
-        for (var index = 0, length = bubblePath.length; index &lt; length && !e.propagationStopped; index++) {
+        for (var index = 0, length = bubblePath.length; index < length && !e.propagationStopped; index++) {
             shape = bubblePath[index];
 
             if (index === 0) {
@@ -1586,7 +1559,7 @@ grease.easing = {
      */
     easeInOutQuad: function (t, b, c, d) {
         t /= d/2;
-        if (t &lt; 1) {
+        if (t < 1) {
             return c/2*t*t + b;
         }   
         t--;
@@ -1615,7 +1588,7 @@ grease.easing = {
      */
     easeInOutCubic: function (t, b, c, d) {
         t /= d/2;
-        if (t &lt; 1) {
+        if (t < 1) {
             return c/2*t*t*t + b;
         }
         t -= 2;
@@ -1644,7 +1617,7 @@ grease.easing = {
      */
     easeInOutQuart: function (t, b, c, d) {
         t /= d/2;
-        if (t &lt; 1) {
+        if (t < 1) {
             return c/2*t*t*t*t + b;
         }
         t -= 2;
@@ -1673,7 +1646,7 @@ grease.easing = {
      */
     easeInOutQuint: function (t, b, c, d) {
         t /= d/2;
-        if (t &lt; 1) {
+        if (t < 1) {
             return c/2*t*t*t*t*t + b;
         }
         t -= 2;
@@ -1720,7 +1693,7 @@ grease.easing = {
      */
     easeInOutExpo: function (t, b, c, d) {
         t /= d/2;
-        if (t &lt; 1) {
+        if (t < 1) {
             return c/2 * Math.pow( 2, 10 * (t - 1) ) + b;
         }
         t--;
@@ -1749,7 +1722,7 @@ grease.easing = {
      */
     easeInOutCirc: function (t, b, c, d) {
         t /= d/2;
-        if (t &lt; 1) {
+        if (t < 1) {
             return -c/2 * (Math.sqrt(1 - t*t) - 1) + b;
         }
         t -= 2;
@@ -1790,26 +1763,4 @@ grease.util = {
 return grease;
 
 
-}));</code></pre>
-        </article>
-    </section>
-
-
-
-
-</div>
-
-<nav>
-    <h2><a href="index.html">Index</a></h2><h3>Classes</h3><ul><li><a href="grease.Arc.html">Arc</a></li><li><a href="grease.Canvas.html">Canvas</a></li><li><a href="grease.Circle.html">Circle</a></li><li><a href="grease.Event.html">Event</a></li><li><a href="grease.FrameBuffer.html">FrameBuffer</a></li><li><a href="grease.Gradient.html">Gradient</a></li><li><a href="grease.Group.html">Group</a></li><li><a href="grease.Image.html">Image</a></li><li><a href="grease.Line.html">Line</a></li><li><a href="grease.Listener.html">Listener</a></li><li><a href="grease.Material.html">Material</a></li><li><a href="grease.Rectangle.html">Rectangle</a></li><li><a href="grease.Scene.html">Scene</a></li><li><a href="grease.Shape.html">Shape</a></li><li><a href="grease.Sprite.html">Sprite</a></li><li><a href="grease.Text.html">Text</a></li></ul><h3>Namespaces</h3><ul><li><a href="grease.html">grease</a></li><li><a href="grease.easing.html">easing</a></li><li><a href="grease.util.html">util</a></li></ul>
-</nav>
-
-<br clear="both">
-
-<footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.2.2</a> on Tue Jul 29 2014 16:25:56 GMT+0100 (BST)
-</footer>
-
-<script> prettyPrint(); </script>
-<script src="scripts/linenumber.js"> </script>
-</body>
-</html>
+}));

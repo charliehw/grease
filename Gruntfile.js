@@ -1,4 +1,3 @@
-/* global module */
 module.exports = function(grunt) {
 
 	// Project configuration.
@@ -11,12 +10,46 @@ module.exports = function(grunt) {
 
 		concat: {
 			options: {
-				banner: '<%= banner %>',
-				stripBanners: true
+				stripBanners: false
 			},
 			dist: {
-				src: ['lib/<%= pkg.name %>.js'],
-				dest: 'dist/<%= pkg.name %>.js'
+				src: [
+					'src/intro.js',
+
+					'src/core/shape.js',
+					'src/core/group.js',
+					'src/core/scene.js',
+
+					'src/shapes/rectangle.js',
+					'src/shapes/arc.js',
+					'src/shapes/circle.js',
+					'src/shapes/line.js',
+					'src/shapes/image.js',
+					'src/shapes/sprite.js',
+					'src/shapes/text.js',
+
+					'src/materials/material.js',
+					'src/materials/gradient.js',
+
+					'src/events/listener.js',
+					'src/events/event.js',
+
+					'src/view/framebuffer.js',
+					'src/view/canvas.js',
+
+					'src/util/easing.js',
+					'src/util/utils.js',
+
+					'src/outro.js'
+				],
+				dest: 'dist/grease.js'
+			},
+			full: {
+				src: [
+					'lib/underscore.js',
+					'dist/grease.js'
+				],
+				dest: 'dist/grease-full.js'
 			}
 		},
 
@@ -25,8 +58,12 @@ module.exports = function(grunt) {
 				banner: '<%= banner %>'
 			},
 			dist: {
-				src: 'grease.js',
-				dest: 'grease.min.js'
+				src: 'dist/grease.js',
+				dest: 'dist/grease.min.js'
+			},
+			full: {
+				src: 'dist/grease-full.js',
+				dest: 'dist/grease-full.min.js'
 			}
 		},
 
@@ -44,13 +81,29 @@ module.exports = function(grunt) {
 				boss: true,
 				eqnull: true,
 				browser: true,
-				globals: {}
+				globals: {
+					'define': false,
+					'require': false,
+					'exports': false,
+					'module': false,
+					'ok': false,
+					'test': false,
+					'grease': true,
+					'asyncTest': false,
+					'expect': false,
+					'start': false,
+					'_': false,
+					'root': false,
+					'doc': false,
+					'math': false,
+					'date': false
+				}
 			},
 			gruntfile: {
 				src: 'Gruntfile.js'
 			},
 			grease: {
-				src: ['grease.js']
+				src: 'src/*/*.js'
 			},
 			tests: {
 				src: 'tests/*.js'
@@ -61,11 +114,14 @@ module.exports = function(grunt) {
 			all: ['tests/*.html']
 		},
 
-		clean: ['doc'],
+		clean: {
+			doc: 'doc', 
+			dist: 'dist'
+		},
 
 		jsdoc: {
 			dist: {
-				src: ['grease.js'],
+				src: ['dist/grease.js'],
 				options: {
 					destination: 'doc'
 				}
@@ -80,12 +136,13 @@ module.exports = function(grunt) {
 	grunt.loadNpmTasks('grunt-contrib-qunit');
 	grunt.loadNpmTasks('grunt-contrib-jshint');
 	grunt.loadNpmTasks('grunt-contrib-clean');
+	grunt.loadNpmTasks('grunt-contrib-concat');
 	grunt.loadNpmTasks('grunt-jsdoc');
 
 	// Default task.
-	grunt.registerTask('default', ['jshint', 'qunit', 'uglify', 'clean', 'jsdoc']);
+	grunt.registerTask('default', ['clean', 'jshint', 'concat', 'qunit', 'uglify', 'jsdoc']);
 	grunt.registerTask('test', ['jshint', 'qunit']);
-	grunt.registerTask('docs', ['clean', 'jsdoc']);
-	grunt.registerTask('dist', ['uglify']);
+	grunt.registerTask('docs', ['clean:doc', 'jsdoc']);
+	grunt.registerTask('dist', ['clean:dist', 'concat', 'uglify']);
 
 };
